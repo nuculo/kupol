@@ -38,7 +38,7 @@ cargo build --release
 ## Commands
 
 ```bash
-kupol scan [path] [-f table|json|markdown] [-o file] [--fail-on low|medium|high|critical]
+kupol scan [path ...] [-f table|json|markdown] [-o file] [--fail-on low|medium|high|critical]
 kupol serve
 kupol init
 kupol mcp
@@ -47,11 +47,18 @@ kupol demo
 kupol help
 ```
 
-`--fail-on` is a CI gate: the wrapper asks the engine for JSON, then exits **1** if any finding is at least that severe (`critical` > `high` > `medium` > `low`). Without `--fail-on`, the exit code is the engine's. GitHub Actions on pull requests to `main` runs `kupol scan . -f markdown -o kupol-report.md --fail-on high` (see `.kupol.yml`).
+`--fail-on` is a CI gate: the wrapper asks the engine for JSON, then exits **1** if any finding is at least that severe (`critical` > `high` > `medium` > `low`). Without `--fail-on`, the exit code is the engine's.
 
 `.kupol.yml` `ignore` is not wired yet — the engine has no ignore flag. It already skips `target/`, `node_modules/`, and `.git/`.
 
 Intentionally noisy samples: `kupol scan fixtures/vuln-lab --fail-on high`.
+
+## CI
+
+On pull requests to `main` and on `workflow_dispatch`:
+
+- **smoke** scans `fixtures/vuln-lab` with `--fail-on high`. It is supposed to fail: those files are planted vulns (demo that the engine catches them).
+- **gate** is the merge signal: scans `src dashboard bin website` with `--fail-on critical`. It does not scan fixtures.
 
 `kupol` locates the engine in this order: `$KUPOL_BIN`, `duo-agents` on `PATH`, `./target/release/duo-agents`, `./release_build/duo-agents`.
 

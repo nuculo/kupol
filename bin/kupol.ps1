@@ -10,7 +10,7 @@ KUPOL — security dome over your repo
 https://kupol.app
 
 Usage:
-  kupol scan [path] [-f table|json|markdown] [-o file] [--fail-on low|medium|high|critical]
+  kupol scan [path ...] [-f table|json|markdown] [-o file] [--fail-on low|medium|high|critical]
   kupol serve
   kupol init
   kupol mcp
@@ -79,6 +79,18 @@ function Test-JsonHitsThreshold([string]$JsonPath, [string]$Threshold) {
     $data = Get-Content -LiteralPath $JsonPath -Raw | ConvertFrom-Json
     $findings = @()
     if ($null -ne $data.findings) { $findings = @($data.findings) }
+    $c = $h = $m = $l = $inf = 0
+    foreach ($item in $findings) {
+        $sev = ([string]$item.severity).ToLowerInvariant()
+        switch ($sev) {
+            "critical" { $c++ }
+            "high" { $h++ }
+            "medium" { $m++ }
+            "low" { $l++ }
+            default { $inf++ }
+        }
+    }
+    Write-Error "kupol: count critical=$c high=$h medium=$m low=$l info=$inf"
     foreach ($item in $findings) {
         if ((Get-SevRank ([string]$item.severity)) -ge $thr) {
             return $true
@@ -94,7 +106,7 @@ if ($args) { $rest = $args }
 switch ($Command) {
     { $_ -in @("help", "-h", "--help") } { Show-Usage; break }
     "scan" {
-        $path = "."
+        $paths = [System.Collections.Generic.List[string]]::new()
         $format = "table"
         $output = $null
         $failOn = $null
@@ -113,7 +125,7 @@ switch ($Command) {
                     continue
                 }
                 "--path" {
-                    $path = $rest[$i + 1]
+                    $paths.Add($rest[$i + 1])
                     $i += 2
                     continue
                 }
@@ -128,11 +140,12 @@ switch ($Command) {
                         Show-Usage
                         exit 1
                     }
-                    $path = $a
+                    $paths.Add($a)
                     $i += 1
                 }
             }
         }
+        if ($paths.Count -eq 0) { $paths.Add(".") }
         if ($format -eq "md") { $format = "markdown" }
         if ($format -notin @("table", "json", "markdown")) {
             Write-Error "kupol scan: invalid format: $format"
@@ -140,10 +153,14 @@ switch ($Command) {
         }
 
         if (-not $failOn) {
-            $argv = @("scan", "--path", $path, "--format", $format)
-            if ($output) { $argv += @("--output", $output) }
-            & $engine @argv
-            exit $LASTEXITCODE
+            $last = 0
+            foreach ($p in $paths) {
+                $argv = @("scan", "--path", $p, "--format", $format)
+                if ($output -and $paths.Count -eq 1) { $argv += @("--output", $output) }
+                & $engine @argv
+                $last = $LASTEXITCODE
+            }
+            exit $last
         }
 
         if ((Get-SevRank $failOn) -lt 1) {
@@ -151,10 +168,29 @@ switch ($Command) {
             exit 1
         }
 
-        $jsonTmp = [System.IO.Path]::GetTempFileName()
+        $jsonParts = @()
+        $mdParts = @()
         try {
-            $jsonArgs = @("scan", "--path", $path, "--format", "json", "--output", $jsonTmp)
-            & $engine @jsonArgs | Out-Null
+            $merged = @{ findings = @() }
+            foreach ($p in $paths) {
+                $part = [System.IO.Path]::GetTempFileName()
+                $jsonParts += $part
+                & $engine @("scan", "--path", $p, "--format", "json", "--output", $part) | Out-Null
+                $chunk = Get-Content -LiteralPath $part -Raw | ConvertFrom-Json
+                if ($null -ne $chunk.findings) { $merged.findings += @($chunk.findings) }
+                if ($format -ne "json") {
+                    if ($output) {
+                        $md = [System.IO.Path]::GetTempFileName()
+                        $mdParts += $md
+                        & $engine @("scan", "--path", $p, "--format", $format, "--output", $md) | Out-Null
+                    } else {
+                        & $engine @("scan", "--path", $p, "--format", $format)
+                    }
+                }
+            }
+            $jsonTmp = [System.IO.Path]::GetTempFileName()
+            $jsonParts += $jsonTmp
+            ($merged | ConvertTo-Json -Depth 20) | Set-Content -LiteralPath $jsonTmp -Encoding utf8
 
             if ($format -eq "json") {
                 if ($output) {
@@ -162,10 +198,14 @@ switch ($Command) {
                 } else {
                     Get-Content -LiteralPath $jsonTmp -Raw
                 }
-            } else {
-                $disp = @("scan", "--path", $path, "--format", $format)
-                if ($output) { $disp += @("--output", $output) }
-                & $engine @disp
+            } elseif ($output) {
+                $acc = New-Object System.Text.StringBuilder
+                for ($n = 0; $n -lt $paths.Count; $n++) {
+                    [void]$acc.AppendLine("# Scan: $($paths[$n])")
+                    [void]$acc.AppendLine()
+                    [void]$acc.AppendLine((Get-Content -LiteralPath $mdParts[$n] -Raw))
+                }
+                Set-Content -LiteralPath $output -Value $acc.ToString() -Encoding utf8
             }
 
             if (Test-JsonHitsThreshold $jsonTmp $failOn) {
@@ -174,7 +214,9 @@ switch ($Command) {
             }
             exit 0
         } finally {
-            Remove-Item -LiteralPath $jsonTmp -ErrorAction SilentlyContinue
+            foreach ($f in ($jsonParts + $mdParts)) {
+                if ($f) { Remove-Item -LiteralPath $f -ErrorAction SilentlyContinue }
+            }
         }
     }
     { $_ -in @("serve", "init", "mcp", "info", "demo") } {
