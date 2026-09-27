@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KUPOL — security dome over your repo</title>
+  <meta name="description" content="KUPOL scans your codebase locally and reports security findings. CLI: kupol. https://kupol.app" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #07080c;
+      --bg-2: #0e1118;
+      --line: rgba(255,255,255,.08);
+      --text: #e8edf5;
+      --muted: #8b95a8;
+      --lime: #7dff6b;
+      --ice: #5ee7ff;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", system-ui, sans-serif; }
+    body { min-height: 100vh; }
+    a { color: var(--ice); }
+    .wrap { width: min(1080px, calc(100% - 32px)); margin: 0 auto; }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 0; border-bottom: 1px solid var(--line);
+    }
+    .brand { font-weight: 700; letter-spacing: .18em; font-size: 14px; }
+    nav { display: flex; gap: 18px; align-items: center; font-size: 14px; }
+    nav a { color: var(--muted); text-decoration: none; }
+    .lang { display: flex; gap: 6px; }
+    .lang button {
+      background: transparent; border: 1px solid var(--line); color: var(--muted);
+      padding: 4px 8px; border-radius: 4px; cursor: pointer; font: inherit;
+    }
+    .lang button[aria-pressed="true"] { color: var(--bg); background: var(--lime); border-color: var(--lime); }
+    .hero { padding: 72px 0 48px; display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center; }
+    h1 { font-size: clamp(32px, 5vw, 56px); line-height: 1.05; margin: 0 0 16px; }
+    .lede { font-size: 18px; color: var(--muted); max-width: 40ch; }
+    .cta { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
+    .btn {
+      display: inline-block; text-decoration: none; padding: 12px 16px; border-radius: 6px;
+      font-weight: 600; font-size: 14px;
+    }
+    .btn-primary { background: var(--lime); color: #071008; }
+    .btn-ghost { border: 1px solid var(--line); color: var(--text); }
+    pre, code { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+    .dome {
+      height: 280px; border: 1px solid var(--line); border-radius: 16px;
+      background:
+        radial-gradient(120% 80% at 50% 110%, rgba(125,255,107,.18), transparent 55%),
+        radial-gradient(80% 60% at 50% 0%, rgba(94,231,255,.12), transparent 50%),
+        var(--bg-2);
+      position: relative; overflow: hidden;
+    }
+    .dome::after {
+      content: ""; position: absolute; left: 10%; right: 10%; bottom: 18%;
+      height: 120px; border: 2px solid rgba(125,255,107,.55);
+      border-bottom: none; border-radius: 160px 160px 0 0;
+    }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 16px 0 56px; }
+    .card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+    .card h3 { margin: 0 0 8px; font-size: 16px; }
+    .card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+    .n { color: var(--lime); font-family: "IBM Plex Mono", monospace; font-size: 12px; }
+    .pricing { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding-bottom: 64px; }
+    .price { font-size: 28px; font-weight: 700; margin: 8px 0 12px; }
+    .price span { font-size: 14px; color: var(--muted); font-weight: 400; }
+    .install {
+      background: #05060a; border: 1px solid var(--line); border-radius: 12px;
+      padding: 16px 18px; overflow-x: auto; font-size: 13px; line-height: 1.6;
+      color: #cfe7d4; margin: 12px 0 64px;
+    }
+    h2 { font-size: 22px; margin: 0 0 16px; }
+    footer { border-top: 1px solid var(--line); padding: 24px 0 40px; color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    [data-lang="ru"] .en, [data-lang="en"] .ru { display: none; }
+    @media (max-width: 800px) {
+      .hero, .steps, .pricing { grid-template-columns: 1fr; }
+      .hero { padding-top: 40px; }
+    }
+  </style>
+</head>
+<body data-lang="en">
+  <div class="wrap">
+    <header>
+      <div class="brand">KUPOL</div>
+      <nav>
+        <a href="#how"><span class="en">How it works</span><span class="ru">Как это работает</span></a>
+        <a href="#pricing"><span class="en">Pricing</span><span class="ru">Цены</span></a>
+        <a href="https://github.com/nuculo/kupol">GitHub</a>
+        <div class="lang">
+          <button type="button" data-set-lang="en" aria-pressed="true">EN</button>
+          <button type="button" data-set-lang="ru" aria-pressed="false">RU</button>
+        </div>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <div>
+        <h1>
+          <span class="en">Security dome over your repo.</span>
+          <span class="ru">Купол безопасности над репозиторием.</span>
+        </h1>
+        <p class="lede en">KUPOL scans a local codebase and prints findings. Run it on your machine or in CI. Not affiliated with GitLab.</p>
+        <p class="lede ru">KUPOL сканирует локальный код и печатает находки. У себя на машине или в CI. Не связан с GitLab.</p>
+        <div class="cta">
+          <a class="btn btn-primary" href="https://github.com/nuculo/kupol/releases">
+            <span class="en">Get the engine</span><span class="ru">Скачать движок</span>
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/nuculo/kupol">
+            <span class="en">Source</span><span class="ru">Исходники</span>
+          </a>
+        </div>
+      </div>
+      <div class="dome" aria-hidden="true"></div>
+    </section>
+
+    <h2 id="how"><span class="en">How it works</span><span class="ru">Как это работает</span></h2>
+    <div class="steps">
+      <article class="card">
+        <div class="n">01</div>
+        <h3><span class="en">Point it at a tree</span><span class="ru">Укажите каталог</span></h3>
+        <p class="en"><code>kupol scan .</code> walks the repo (honoring <code>.kupol.yml</code> ignore rules) and runs the scanner plugins.</p>
+        <p class="ru"><code>kupol scan .</code> обходит репозиторий (с ignore из <code>.kupol.yml</code>) и запускает плагины сканера.</p>
+      </article>
+      <article class="card">
+        <div class="n">02</div>
+        <h3><span class="en">Read the report</span><span class="ru">Читайте отчёт</span></h3>
+        <p class="en">Table, JSON, or Markdown. Severity and file/line for each finding.</p>
+        <p class="ru">Таблица, JSON или Markdown. Severity и файл/строка для каждой находки.</p>
+      </article>
+      <article class="card">
+        <div class="n">03</div>
+        <h3><span class="en">Fail the build</span><span class="ru">Ломайте сборку</span></h3>
+        <p class="en">In CI, fail on <code>high</code> (see <code>.kupol.yml</code> and <code>.github/workflows/scan.yml</code>). GitHub or GitLab — either host is fine.</p>
+        <p class="ru">В CI падайте на <code>high</code> (см. <code>.kupol.yml</code> и <code>.github/workflows/scan.yml</code>). GitHub или GitLab — без разницы.</p>
+      </article>
+    </div>
+
+    <h2 id="install"><span class="en">Install</span><span class="ru">Установка</span></h2>
+    <pre class="install"># from the repo, after cargo build --release or unpacking a Release
+chmod +x install.sh bin/kupol
+./install.sh ./target/release/duo-agents
+kupol scan . -f table</pre>
+
+    <h2 id="pricing"><span class="en">Pricing</span><span class="ru">Цены</span></h2>
+    <div class="pricing">
+      <article class="card">
+        <div class="n">Free</div>
+        <div class="price">$0</div>
+        <p class="en">CLI, local scan, MIT source, GitHub Releases engine.</p>
+        <p class="ru">CLI, локальный скан, исходники MIT, движок из GitHub Releases.</p>
+      </article>
+      <article class="card">
+        <div class="n">Team</div>
+        <div class="price">$49 <span class="en">/ month</span><span class="ru"> / мес</span></div>
+        <p class="en">Shared report workflow for a small team. Same scanner.</p>
+        <p class="ru">Общий процесс отчётов для небольшой команды. Тот же сканер.</p>
+      </article>
+      <article class="card">
+        <div class="n">Company</div>
+        <div class="price"><span class="en">from</span><span class="ru">от</span> $199 <span class="en">/ month</span><span class="ru"> / мес</span></div>
+        <p class="en">Org-wide CI templates and support. Same scanner.</p>
+        <p class="ru">CI-шаблоны на организацию и поддержка. Тот же сканер.</p>
+      </article>
+    </div>
+
+    <footer>
+      <span>KUPOL · MIT · not affiliated with GitLab</span>
+      <span><a href="https://kupol.app">kupol.app</a> · <a href="https://github.com/nuculo/kupol">github.com/nuculo/kupol</a></span>
+    </footer>
+  </div>
+  <script>
+    const root = document.body;
+    const buttons = document.querySelectorAll("[data-set-lang]");
+    function setLang(lang) {
+      root.setAttribute("data-lang", lang);
+      buttons.forEach((b) => b.setAttribute("aria-pressed", b.getAttribute("data-set-lang") === lang ? "true" : "false"));
+    }
+    buttons.forEach((b) => b.addEventListener("click", () => setLang(b.getAttribute("data-set-lang"))));
+  </script>
+</body>
+</html>
