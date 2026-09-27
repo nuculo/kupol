@@ -2,8 +2,10 @@ name: KUPOL scan
 
 on:
   pull_request:
-  push:
     branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   scan:
@@ -11,16 +13,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Build engine
-        run: cargo build --release
+      - name: Download engine release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v1.0.0 \
+            --repo "${{ github.repository }}" \
+            --pattern 'duo-agents-v1.0-Release.tar.gz'
+          tar -xzf duo-agents-v1.0-Release.tar.gz
+          BIN="$(find . -type f -name duo-agents ! -name '*.exe' | head -n 1)"
+          if [ -z "$BIN" ]; then
+            echo "linux engine binary not found in release tarball" >&2
+            exit 1
+          fi
+          chmod +x "$BIN" bin/kupol
+          echo "KUPOL_BIN=$PWD/$BIN" >> "$GITHUB_ENV"
+          echo "using engine $BIN"
 
       - name: Scan
-        run: |
-          chmod +x bin/kupol
-          ./bin/kupol scan . -f markdown -o kupol-report.md
+        run: ./bin/kupol scan . -f markdown -o kupol-report.md --fail-on high
 
       - name: Upload report
         if: always()

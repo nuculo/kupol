@@ -1,3 +1,5 @@
+# ignore is planned: the engine has no --ignore flag yet (it already skips
+# target/, node_modules/, .git/). fail_on is applied when you pass --fail-on.
 ignore:
   - target
   - node_modules

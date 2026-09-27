@@ -8,13 +8,20 @@ KUPOL — security dome over your repo
 https://kupol.app
 
 Usage:
-  kupol scan [path] [-f table|json|markdown] [-o file]
+  kupol scan [path] [-f table|json|markdown] [-o file] [--fail-on low|medium|high|critical]
   kupol serve
   kupol init
   kupol mcp
   kupol info
   kupol demo
   kupol help
+
+--fail-on: exit 1 if any finding is at least that severe (critical > high > medium > low).
+If omitted, exit with the engine's status.
+
+.kupol.yml: fail_on is the recommended CI default (pass it as --fail-on).
+ignore globs in .kupol.yml are planned — the engine has no ignore CLI flag yet
+(it already skips target/, node_modules/, and .git/ internally).
 
 Engine lookup: $KUPOL_BIN, duo-agents on PATH,
 ./target/release/duo-agents, ./release_build/duo-agents
@@ -53,6 +60,48 @@ find_engine() {
   return 1
 }
 
+# Returns 1 if JSON findings include anything >= threshold.
+json_hits_threshold() {
+  local json_file="$1"
+  local threshold="$2"
+  local py
+  py="$(command -v python3 || command -v python || true)"
+  if [ -n "$py" ]; then
+    "$py" - "$json_file" "$threshold" <<'PY'
+import json, sys
+rank = {"info": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
+path, thr_name = sys.argv[1], sys.argv[2].lower()
+thr = rank.get(thr_name)
+if thr is None:
+    sys.stderr.write("kupol: invalid --fail-on %s\n" % thr_name)
+    sys.exit(2)
+with open(path, encoding="utf-8") as f:
+    data = json.load(f)
+findings = data.get("findings", []) if isinstance(data, dict) else []
+for item in findings:
+    sev = str(item.get("severity", "")).lower()
+    if rank.get(sev, 0) >= thr:
+        sys.exit(1)
+sys.exit(0)
+PY
+    return $?
+  fi
+
+  # Fallback without Python: look at serialized severity strings.
+  local want found=""
+  case "$(printf '%s' "$threshold" | tr '[:upper:]' '[:lower:]')" in
+    low) want='Critical|High|Medium|Low' ;;
+    medium) want='Critical|High|Medium' ;;
+    high) want='Critical|High' ;;
+    critical) want='Critical' ;;
+    *) echo "kupol: invalid --fail-on $threshold" >&2; return 2 ;;
+  esac
+  if grep -Eqi "\"severity\":[[:space:]]*\"($want)\"" "$json_file"; then
+    return 1
+  fi
+  return 0
+}
+
 ENGINE="$(find_engine)"
 
 CMD="${1:-help}"
@@ -68,6 +117,7 @@ case "$CMD" in
     path="."
     format="table"
     output=""
+    fail_on=""
     while [ "$#" -gt 0 ]; do
       case "$1" in
         -f|--format)
@@ -82,6 +132,10 @@ case "$CMD" in
           path="${2:-}"
           shift 2
           ;;
+        --fail-on)
+          fail_on="${2:-}"
+          shift 2
+          ;;
         -*)
           echo "kupol scan: unknown option: $1" >&2
           usage >&2
@@ -93,11 +147,63 @@ case "$CMD" in
           ;;
       esac
     done
-    if [ -n "$output" ]; then
-      exec "$ENGINE" scan --path "$path" --format "$format" --output "$output"
-    else
-      exec "$ENGINE" scan --path "$path" --format "$format"
+
+    case "$format" in
+      table|json|markdown|md) ;;
+      *) echo "kupol scan: invalid format: $format" >&2; exit 1 ;;
+    esac
+    if [ "$format" = "md" ]; then
+      format="markdown"
     fi
+
+    if [ -z "$fail_on" ]; then
+      if [ -n "$output" ]; then
+        exec "$ENGINE" scan --path "$path" --format "$format" --output "$output"
+      else
+        exec "$ENGINE" scan --path "$path" --format "$format"
+      fi
+    fi
+
+    case "$(printf '%s' "$fail_on" | tr '[:upper:]' '[:lower:]')" in
+      low|medium|high|critical) ;;
+      *) echo "kupol scan: --fail-on must be low|medium|high|critical" >&2; exit 1 ;;
+    esac
+
+    json_tmp="$(mktemp)"
+    trap 'rm -f "$json_tmp"' EXIT
+    engine_rc=0
+    "$ENGINE" scan --path "$path" --format json --output "$json_tmp" || engine_rc=$?
+
+    if [ "$format" = "json" ]; then
+      if [ -n "$output" ]; then
+        cp "$json_tmp" "$output"
+      else
+        cat "$json_tmp"
+      fi
+    else
+      display_rc=0
+      if [ -n "$output" ]; then
+        "$ENGINE" scan --path "$path" --format "$format" --output "$output" || display_rc=$?
+      else
+        "$ENGINE" scan --path "$path" --format "$format" || display_rc=$?
+      fi
+      if [ "$engine_rc" -eq 0 ]; then
+        engine_rc="$display_rc"
+      fi
+    fi
+
+    set +e
+    json_hits_threshold "$json_tmp" "$fail_on"
+    gate_rc=$?
+    set -e
+    if [ "$gate_rc" -eq 2 ]; then
+      exit 2
+    fi
+    if [ "$gate_rc" -eq 1 ]; then
+      echo "kupol: findings at or above --fail-on $fail_on" >&2
+      exit 1
+    fi
+    exit 0
     ;;
   serve|init|mcp|info|demo)
     exec "$ENGINE" "$CMD" "$@"
