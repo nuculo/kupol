@@ -1,0 +1,22 @@
+# duo-agents engine binary — AGPL, ~15MB. Do not commit.
+# Ship it as a GitHub Release asset, not in git history.
+duo-agents
+duo-agents.exe
+/vendor/duo-agents*
+/bin/duo-agents*
+
+# local / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+target/
+__pycache__/
+.venv/
+venv/
