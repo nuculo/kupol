@@ -8,7 +8,7 @@ KUPOL — security dome over your repo
 https://kupol.app
 
 Usage:
-  kupol scan [path] [-f table|json|markdown] [-o file] [--fail-on low|medium|high|critical]
+  kupol scan [path ...] [-f table|json|markdown] [-o file] [--fail-on low|medium|high|critical]
   kupol serve
   kupol init
   kupol mcp
@@ -60,7 +60,6 @@ find_engine() {
   return 1
 }
 
-# Returns 1 if JSON findings include anything >= threshold.
 json_hits_threshold() {
   local json_file="$1"
   local threshold="$2"
@@ -78,6 +77,22 @@ if thr is None:
 with open(path, encoding="utf-8") as f:
     data = json.load(f)
 findings = data.get("findings", []) if isinstance(data, dict) else []
+c = h = m = l = i = 0
+for item in findings:
+    sev = str(item.get("severity", "")).lower()
+    if sev == "critical":
+        c += 1
+    elif sev == "high":
+        h += 1
+    elif sev == "medium":
+        m += 1
+    elif sev == "low":
+        l += 1
+    else:
+        i += 1
+sys.stderr.write(
+    "kupol: count critical=%d high=%d medium=%d low=%d info=%d\n" % (c, h, m, l, i)
+)
 for item in findings:
     sev = str(item.get("severity", "")).lower()
     if rank.get(sev, 0) >= thr:
@@ -87,8 +102,7 @@ PY
     return $?
   fi
 
-  # Fallback without Python: look at serialized severity strings.
-  local want found=""
+  local want
   case "$(printf '%s' "$threshold" | tr '[:upper:]' '[:lower:]')" in
     low) want='Critical|High|Medium|Low' ;;
     medium) want='Critical|High|Medium' ;;
@@ -100,6 +114,33 @@ PY
     return 1
   fi
   return 0
+}
+
+merge_json_files() {
+  local out="$1"
+  shift
+  local py
+  py="$(command -v python3 || command -v python || true)"
+  if [ -z "$py" ]; then
+    cat "$1" > "$out"
+    return 0
+  fi
+  "$py" - "$out" "$@" <<'PY'
+import json, sys
+out = sys.argv[1]
+merged = {"findings": [], "summary": {}, "target": []}
+for path in sys.argv[2:]:
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    if isinstance(data, dict):
+        merged["findings"].extend(data.get("findings") or [])
+        t = data.get("target")
+        if t:
+            merged["target"].append(t)
+merged["target"] = " ".join(merged["target"])
+with open(out, "w", encoding="utf-8") as f:
+    json.dump(merged, f)
+PY
 }
 
 ENGINE="$(find_engine)"
@@ -114,7 +155,7 @@ case "$CMD" in
     usage
     ;;
   scan)
-    path="."
+    paths=()
     format="table"
     output=""
     fail_on=""
@@ -129,7 +170,7 @@ case "$CMD" in
           shift 2
           ;;
         --path)
-          path="${2:-}"
+          paths+=("${2:-}")
           shift 2
           ;;
         --fail-on)
@@ -142,11 +183,14 @@ case "$CMD" in
           exit 1
           ;;
         *)
-          path="$1"
+          paths+=("$1")
           shift
           ;;
       esac
     done
+    if [ "${#paths[@]}" -eq 0 ]; then
+      paths=(".")
+    fi
 
     case "$format" in
       table|json|markdown|md) ;;
@@ -157,11 +201,15 @@ case "$CMD" in
     fi
 
     if [ -z "$fail_on" ]; then
-      if [ -n "$output" ]; then
-        exec "$ENGINE" scan --path "$path" --format "$format" --output "$output"
-      else
-        exec "$ENGINE" scan --path "$path" --format "$format"
-      fi
+      last_rc=0
+      for p in "${paths[@]}"; do
+        if [ -n "$output" ] && [ "${#paths[@]}" -eq 1 ]; then
+          "$ENGINE" scan --path "$p" --format "$format" --output "$output" || last_rc=$?
+        else
+          "$ENGINE" scan --path "$p" --format "$format" || last_rc=$?
+        fi
+      done
+      exit "$last_rc"
     fi
 
     case "$(printf '%s' "$fail_on" | tr '[:upper:]' '[:lower:]')" in
@@ -170,9 +218,26 @@ case "$CMD" in
     esac
 
     json_tmp="$(mktemp)"
-    trap 'rm -f "$json_tmp"' EXIT
-    engine_rc=0
-    "$ENGINE" scan --path "$path" --format json --output "$json_tmp" || engine_rc=$?
+    json_parts=()
+    md_parts=()
+    trap 'rm -f "${json_parts[@]}" "${md_parts[@]}" "$json_tmp"' EXIT
+
+    for p in "${paths[@]}"; do
+      part="$(mktemp)"
+      json_parts+=("$part")
+      "$ENGINE" scan --path "$p" --format json --output "$part" || true
+      if [ "$format" != "json" ]; then
+        if [ -n "$output" ]; then
+          mdpart="$(mktemp)"
+          md_parts+=("$mdpart")
+          "$ENGINE" scan --path "$p" --format "$format" --output "$mdpart" || true
+        else
+          "$ENGINE" scan --path "$p" --format "$format" || true
+        fi
+      fi
+    done
+
+    merge_json_files "$json_tmp" "${json_parts[@]}"
 
     if [ "$format" = "json" ]; then
       if [ -n "$output" ]; then
@@ -180,16 +245,17 @@ case "$CMD" in
       else
         cat "$json_tmp"
       fi
-    else
-      display_rc=0
-      if [ -n "$output" ]; then
-        "$ENGINE" scan --path "$path" --format "$format" --output "$output" || display_rc=$?
-      else
-        "$ENGINE" scan --path "$path" --format "$format" || display_rc=$?
-      fi
-      if [ "$engine_rc" -eq 0 ]; then
-        engine_rc="$display_rc"
-      fi
+    elif [ -n "$output" ]; then
+      : > "$output"
+      idx=0
+      for p in "${paths[@]}"; do
+        {
+          printf '# Scan: %s\n\n' "$p"
+          cat "${md_parts[$idx]}"
+          printf '\n'
+        } >> "$output"
+        idx=$((idx + 1))
+      done
     fi
 
     set +e
