@@ -2,26 +2,51 @@
 
 Security dome over your repo.
 
-KUPOL sits on top of your codebase and the **duo-agents** engine: it watches, gates, and reports — without putting the AGPL engine binary into git.
+KUPOL is the product shell around the **duo-agents** engine (Duo Architecture Guardian): multi-agent security and architecture review for a codebase. Engine **source** lives in this repo. The compiled `duo-agents` binary (~15MB) is **not** in git — download it from [GitHub Releases](https://github.com/rustoman-AI/kupol/releases).
 
-## Layout (CTO)
+Upstream engine license in-tree is **MIT** (see `LICENSE`). The release tarball is the supported binary distribution.
 
-| Path | What belongs here |
+## Architecture (CTO)
+
+Closed core / open shell, unchanged from the engine:
+
+| Piece | Path |
 | --- | --- |
-| `docs/` | Product draft and architecture notes |
-| `engine/` | Engine *source* and wrappers we own (not the 15MB binary) |
-| GitHub Releases | `duo-agents` / `duo-agents.exe` — download, do not commit |
+| Open shell (CLI, actors, Axum, dashboard) | `src/`, `dashboard/` |
+| Closed core (KAN, scan, policy, blast-radius) | `duo-kan/` |
+| Product + architecture draft | `docs/Arch/` |
+| Compiled engine | GitHub Releases (`duo-agents-v1.0-Release.tar.gz`) |
 
-Paste or copy the engine and product draft into this tree when you have them. The binary stays out of the repo.
-
-## Engine binary
-
-Do **not** `git add` `duo-agents`. After a tagged release:
-
-```bash
-gh release create v0.1.0 ./duo-agents.exe --title "v0.1.0" --notes "Engine binary (AGPL). Source and product live in this repo."
+```
+GitLab Duo / your repo
+        │
+        ▼
+   KUPOL (this product)
+        │
+        ▼
+   duo-agents engine  →  duo-kan core
 ```
 
-## Status
+## Quick start
 
-Scaffold only. Engine and product draft are not in this clone yet.
+**From source**
+
+```bash
+cargo build --release
+./run.sh
+./run.sh scan /path/to/code
+```
+
+**From the v1.0 release tarball**
+
+```bash
+tar -xzf duo-agents-v1.0-Release.tar.gz
+# binary: release_build/duo-agents
+# architecture notes: release_build/docs/
+```
+
+Do not `git add` `duo-agents` or the `.tar.gz`.
+
+## Engine README
+
+The original Duo Architecture Guardian write-up (hackathon agents, CI, stack) is in `docs/duo-agents-readme.md`.

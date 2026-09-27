@@ -1,9 +1,12 @@
-# Product draft
+# Product and architecture draft
 
-Drop the CTO product draft here (markdown or whatever format it already uses).
+This tree is the KUPOL product draft, copied from the duo-agents engine docs.
 
-Until that file lands, this folder is the intended home for:
+Start here:
 
-- what KUPOL is (security dome over a repo)
-- how it uses duo-agents
-- what is in-repo vs GitHub Releases (AGPL binary)
+- [Arch/task.md](Arch/task.md) — 50-phase map (closed core in `duo-kan`)
+- [Arch/implementation_plan.md](Arch/implementation_plan.md) — hackathon / platform plan
+- [Arch/walkthrough.md](Arch/walkthrough.md)
+- [Arch/KAN/](Arch/KAN/) — KAN HLD and security rules
+- [hackathon/](hackathon/) — Duo agent prompt and flow
+- [duo-agents-readme.md](duo-agents-readme.md) — original engine README

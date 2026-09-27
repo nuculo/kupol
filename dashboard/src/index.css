@@ -1,0 +1,40 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+@layer base {
+  body {
+    @apply bg-background text-gray-200 antialiased overflow-hidden selection:bg-neonBlue selection:text-white;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-panel backdrop-blur-md border border-borderBase shadow-2xl;
+  }
+}
+
+/* React Flow custom edge and handle styling for dark theme */
+.react-flow__handle {
+  width: 10px;
+  height: 10px;
+  background-color: #39ff14;
+  border: 2px solid #000;
+}
+
+.react-flow__edge-path {
+  stroke-width: 2;
+  transition: stroke 0.3s ease;
+}
+
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 5;
+  animation: dashdraw 0.5s linear infinite;
+}
+
+@keyframes dashdraw {
+  from { stroke-dashoffset: 10; }
+}
+
+.react-flow__attribution {
+  display: none; /* Premium look */
+}

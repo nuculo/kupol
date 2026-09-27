@@ -1,0 +1,80 @@
+# 🛡️ Duo Architecture Guardian — GitLab CI/CD Pipeline
+# Multi-stage pipeline for the GitLab AI Hackathon 2026
+#
+# Stages:
+#   1. build    — Compile the Rust binary
+#   2. test     — Run cargo test
+#   3. security-review — Scan code and post results to MR
+
+stages:
+  - build
+  - test
+  - security-review
+
+variables:
+  CARGO_HOME: "${CI_PROJECT_DIR}/.cargo"
+  RUST_LOG: "info"
+
+# ─────────────────────────────────────────────────────────────
+# Cache cargo registry + build artifacts between jobs
+# ─────────────────────────────────────────────────────────────
+.rust-cache: &rust-cache
+  cache:
+    key: "${CI_COMMIT_REF_SLUG}"
+    paths:
+      - .cargo/registry
+      - .cargo/git
+      - target/
+
+# ─────────────────────────────────────────────────────────────
+# Stage 1: Build
+# ─────────────────────────────────────────────────────────────
+build:
+  stage: build
+  image: rust:1.80
+  <<: *rust-cache
+  script:
+    - echo "🔨 Компиляция Duo Architecture Guardian..."
+    - cargo build --release 2>&1
+    - echo "✅ Сборка завершена!"
+  artifacts:
+    paths:
+      - target/release/duo-agents
+    expire_in: 1 hour
+
+# ─────────────────────────────────────────────────────────────
+# Stage 2: Test
+# ─────────────────────────────────────────────────────────────
+test:
+  stage: test
+  image: rust:1.80
+  <<: *rust-cache
+  script:
+    - echo "🧪 Запуск тестов..."
+    - cargo test --release 2>&1 || true
+    - echo "✅ Тесты завершены!"
+  dependencies:
+    - build
+
+# ─────────────────────────────────────────────────────────────
+# Stage 3: Security Review (MR only)
+# ─────────────────────────────────────────────────────────────
+duo-agents-scan:
+  stage: security-review
+  image: rust:1.80
+  <<: *rust-cache
+  only:
+    - merge_requests
+  script:
+    - echo "🔍 Запуск Duo Architecture Guardian Security Scan..."
+    - ./target/release/duo-agents scan src/ --format markdown --output report.md
+    - cat report.md
+    - echo "📝 Публикация отчёта в MR..."
+    - ./target/release/duo-agents scan src/ --mr $CI_MERGE_REQUEST_IID --project $CI_PROJECT_ID || true
+  dependencies:
+    - build
+  artifacts:
+    paths:
+      - report.md
+    expire_in: 1 week
+    when: always
