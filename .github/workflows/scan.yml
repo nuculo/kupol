@@ -11,6 +11,7 @@ permissions:
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -33,6 +34,15 @@ jobs:
 
       - name: "expected red: fixtures contain vulns"
         run: ./bin/kupol scan fixtures/vuln-lab -f markdown -o smoke-report.md --fail-on high
+
+      - name: Confirm fixtures were hit
+        if: always()
+        run: |
+          if [ -f smoke-report.md ] && grep -E 'sk-|SELECT' smoke-report.md >/dev/null; then
+            echo "fixtures hit: smoke-report.md contains sk- or SELECT"
+          else
+            echo "fixtures not confirmed: no sk- or SELECT in smoke-report.md"
+          fi
 
       - name: Upload smoke report
         if: always()
@@ -65,6 +75,16 @@ jobs:
 
       - name: Gate (src dashboard bin website, not fixtures)
         run: ./bin/kupol scan src dashboard bin website -f markdown -o gate-report.md --fail-on critical
+
+      - name: Print gate report (first 40 lines)
+        if: always()
+        run: |
+          if [ -f gate-report.md ]; then
+            head -n 40 gate-report.md
+          else
+            echo "gate-report.md missing"
+            exit 1
+          fi
 
       - name: Upload gate report
         if: always()

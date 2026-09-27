@@ -57,7 +57,7 @@ Intentionally noisy samples: `kupol scan fixtures/vuln-lab --fail-on high`.
 
 On pull requests to `main` and on `workflow_dispatch`:
 
-- **smoke** scans `fixtures/vuln-lab` with `--fail-on high`. It is supposed to fail: those files are planted vulns (demo that the engine catches them).
+- **smoke** scans `fixtures/vuln-lab` with `--fail-on high`. It is expected red (planted vulns) and is not a merge blocker (`continue-on-error`).
 - **gate** is the merge signal: scans `src dashboard bin website` with `--fail-on critical`. It does not scan fixtures.
 
 `kupol` locates the engine in this order: `$KUPOL_BIN`, `duo-agents` on `PATH`, `./target/release/duo-agents`, `./release_build/duo-agents`.
