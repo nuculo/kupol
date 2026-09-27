@@ -4,11 +4,11 @@ Security dome over your repo.
 
 KUPOL scans a local codebase for security findings and prints a report. It is a standalone product at [kupol.app](https://kupol.app). Not affiliated with GitLab.
 
-The public command is `kupol`. The engine crate in this repo is still named `duo-agents` so `cargo build` stays unchanged. Compiled engine binaries and `*.tar.gz` are not in git — they live in [Releases](https://github.com/rustoman-AI/kupol/releases).
+The public command is `kupol`. The engine crate in this repo is still named `duo-agents` so `cargo build` stays unchanged. Compiled engine binaries and `*.tar.gz` are not in git — they live in [Releases](https://github.com/nuculo/kupol/releases).
 
 ## Install from Releases
 
-1. Download `duo-agents-v1.0-Release.tar.gz` from [Releases](https://github.com/rustoman-AI/kupol/releases).
+1. Download `duo-agents-v1.0-Release.tar.gz` from [Releases](https://github.com/nuculo/kupol/releases).
 2. Extract. The engine binary is `release_build/duo-agents`.
 3. From this repo:
 
@@ -29,7 +29,7 @@ export KUPOL_BIN=/path/to/duo-agents
 ## Install from source
 
 ```bash
-git clone https://github.com/rustoman-AI/kupol.git
+git clone https://github.com/nuculo/kupol.git
 cd kupol
 cargo build --release
 ./install.sh ./target/release/duo-agents
