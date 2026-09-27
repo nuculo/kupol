@@ -1,0 +1,30 @@
+name: KUPOL scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build engine
+        run: cargo build --release
+
+      - name: Scan
+        run: |
+          chmod +x bin/kupol
+          ./bin/kupol scan . -f markdown -o kupol-report.md
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kupol-report
+          path: kupol-report.md

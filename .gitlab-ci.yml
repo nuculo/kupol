@@ -1,10 +1,9 @@
-# 🛡️ Duo Architecture Guardian — GitLab CI/CD Pipeline
-# Multi-stage pipeline for the GitLab AI Hackathon 2026
+# KUPOL — optional GitLab CI (same role as GitHub Actions)
 #
 # Stages:
-#   1. build    — Compile the Rust binary
+#   1. build    — Compile the Rust binary (crate name duo-agents)
 #   2. test     — Run cargo test
-#   3. security-review — Scan code and post results to MR
+#   3. security-review — Scan code on merge requests
 
 stages:
   - build
@@ -34,7 +33,7 @@ build:
   image: rust:1.80
   <<: *rust-cache
   script:
-    - echo "🔨 Компиляция Duo Architecture Guardian..."
+    - echo "🔨 Компиляция KUPOL engine..."
     - cargo build --release 2>&1
     - echo "✅ Сборка завершена!"
   artifacts:
@@ -66,7 +65,7 @@ duo-agents-scan:
   only:
     - merge_requests
   script:
-    - echo "🔍 Запуск Duo Architecture Guardian Security Scan..."
+    - echo "🔍 KUPOL security scan..."
     - ./target/release/duo-agents scan src/ --format markdown --output report.md
     - cat report.md
     - echo "📝 Публикация отчёта в MR..."

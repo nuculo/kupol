@@ -1,12 +1,7 @@
-# Product and architecture draft
+# Docs
 
-This tree is the KUPOL product draft, copied from the duo-agents engine docs.
+Product surface is the root [README](../README.md) and [kupol.app](https://kupol.app).
 
-Start here:
+`docs/Arch/` is historical engine notes (research, phase map). It is not the public product story. Do not treat those files as marketing copy.
 
-- [Arch/task.md](Arch/task.md) — 50-phase map (closed core in `duo-kan`)
-- [Arch/implementation_plan.md](Arch/implementation_plan.md) — hackathon / platform plan
-- [Arch/walkthrough.md](Arch/walkthrough.md)
-- [Arch/KAN/](Arch/KAN/) — KAN HLD and security rules
-- [hackathon/](hackathon/) — Duo agent prompt and flow
-- [duo-agents-readme.md](duo-agents-readme.md) — original engine README
+GitLab appears only as an optional git/CI host, same as GitHub.

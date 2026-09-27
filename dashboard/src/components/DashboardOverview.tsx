@@ -21,11 +21,10 @@ export default function DashboardOverview({ scanResult, scanHistory, onRunScan, 
               <ShieldCheck size={40} className="text-black" />
             </div>
             <h2 className="text-3xl font-bold text-white mb-3">
-              Duo Architecture Guardian
+              KUPOL
             </h2>
             <p className="text-gray-400 text-lg mb-8 max-w-lg mx-auto">
-              AI-powered security scanning for GitLab Merge Requests.
-              Detect vulnerabilities before they reach production.
+              Security scan for a local repo. Findings before they ship.
             </p>
             <button
               onClick={() => onRunScan('src/')}

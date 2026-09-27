@@ -80,9 +80,9 @@ function App() {
             <ShieldCheck size={20} className="text-black" />
           </div>
           <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-            Duo Architecture Guardian
+            KUPOL
           </h1>
-          <span className="text-xs text-gray-500 ml-2 hidden sm:inline">v0.1.0 • Hackathon Edition</span>
+          <span className="text-xs text-gray-500 ml-2 hidden sm:inline">v0.1.0</span>
         </div>
 
         {/* Tabs */}

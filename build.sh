@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# 🔧 build.sh — Сборка Duo Architecture Guardian
+# 🔧 build.sh — Сборка KUPOL (crate: duo-agents)
 # ============================================================================
 # Использование:
 #   ./build.sh              # Полная сборка (Rust + Dashboard)
@@ -33,7 +33,7 @@ for arg in "$@"; do
         --release) RELEASE=true ;;
         --clean) CLEAN=true ;;
         --help|-h)
-            echo -e "${CYAN}🔧 Duo Architecture Guardian — Сборка${NC}"
+            echo -e "${CYAN}🔧 KUPOL — Сборка${NC}"
             echo ""
             echo "  --rust         Только Rust backend"
             echo "  --dashboard    Только React dashboard"
@@ -46,7 +46,7 @@ done
 
 echo -e "${CYAN}"
 echo "  ╔══════════════════════════════════════════════════════╗"
-echo "  ║     🛡️  Duo Architecture Guardian — Сборка          ║"
+echo "  ║     KUPOL — Сборка                                   ║"
 echo "  ╚══════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 

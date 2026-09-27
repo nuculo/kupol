@@ -1,0 +1,6 @@
+ignore:
+  - target
+  - node_modules
+  - dist
+min_severity: low
+fail_on: high

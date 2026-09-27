@@ -1,4 +1,4 @@
-# Duo Architecture Guardian — Chat Rules
+# KUPOL — review rules
 
 ## Merge Request Review Rules
 

@@ -1,10 +1,10 @@
-# 🏆 GitLab Duo Hackathon: Платформа AI Security Agent
+# План: AI Security Agent
 
 ## Цель
 
-Создать **AI Security Agent для GitLab Duo** — платформу автоматического анализа безопасности Merge Request, объединяющую существующий Rust-backend `duo-agents` с promptfoo-подобным интерфейсом для оценки и визуализации результатов.
+Собрать сканер безопасности вокруг Rust-backend `duo-agents` (имя crate) с CLI и визуализацией результатов.
 
-**Ключевая идея:** GitLab Duo Code Suggestions + AI Security Review = автоматический red-teaming кода прямо в MR workflow.
+**Ключевая идея:** сканер в CI рядом с review изменений.
 
 ## Что уже есть (`duo-agents`)
 

@@ -1,0 +1,23 @@
+# KUPOL
+
+You are working in this repo (github.com/rustoman-AI/kupol).
+
+## Product
+- Name: KUPOL
+- Domain: https://kupol.app
+- Public CLI: kupol
+- Not affiliated with GitLab. Not GitLab Duo.
+
+## Hard rules
+- Do not rename the Cargo package or binary target (keep crate name `duo-agents` so `cargo build` still works).
+- Do not rewrite the Rust scanner unless the user explicitly asks.
+- Do not commit `duo-agents` binaries or `*.tar.gz`. Keep them in `.gitignore` and GitHub Releases only.
+- Do not invent features. `duo-kan/` is public in this repo — do not call it closed-core.
+- Do not mention GitLabHQ vulns, KAN miracles, or auto-healing MRs on the site or README.
+- Forbidden strings in product-facing files (README, website, AGENTS.md, docs meant for users): "GitLab Duo", "Duo Agent Platform", "Duo Architecture Guardian", "Duo Chat".
+- GitLab is OK only as an optional git/CI host, same as GitHub.
+
+## Public CLI
+`kupol` wraps the engine (`$KUPOL_BIN`, `duo-agents` on PATH, `./target/release/duo-agents`, or `./release_build/duo-agents`).
+Commands: scan, serve, init, mcp, info, demo, help.
+`kupol scan [path] [-f table|json|markdown] [-o file]`

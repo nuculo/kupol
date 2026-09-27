@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# KUPOL public CLI — wraps the duo-agents engine binary.
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+KUPOL — security dome over your repo
+https://kupol.app
+
+Usage:
+  kupol scan [path] [-f table|json|markdown] [-o file]
+  kupol serve
+  kupol init
+  kupol mcp
+  kupol info
+  kupol demo
+  kupol help
+
+Engine lookup: $KUPOL_BIN, duo-agents on PATH,
+./target/release/duo-agents, ./release_build/duo-agents
+EOF
+}
+
+find_engine() {
+  if [ -n "${KUPOL_BIN:-}" ]; then
+    if [ -f "$KUPOL_BIN" ]; then
+      printf '%s\n' "$KUPOL_BIN"
+      return 0
+    fi
+    echo "kupol: KUPOL_BIN is set but not a file: $KUPOL_BIN" >&2
+    return 1
+  fi
+
+  if command -v duo-agents >/dev/null 2>&1; then
+    command -v duo-agents
+    return 0
+  fi
+
+  local cand
+  for cand in \
+    ./target/release/duo-agents \
+    ./target/release/duo-agents.exe \
+    ./release_build/duo-agents \
+    ./release_build/duo-agents.exe
+  do
+    if [ -f "$cand" ]; then
+      printf '%s\n' "$cand"
+      return 0
+    fi
+  done
+
+  echo "kupol: engine not found. Set KUPOL_BIN, install duo-agents on PATH, or build with cargo build --release." >&2
+  return 1
+}
+
+ENGINE="$(find_engine)"
+
+CMD="${1:-help}"
+if [ "$#" -gt 0 ]; then
+  shift
+fi
+
+case "$CMD" in
+  help|-h|--help)
+    usage
+    ;;
+  scan)
+    path="."
+    format="table"
+    output=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        -f|--format)
+          format="${2:-}"
+          shift 2
+          ;;
+        -o|--output)
+          output="${2:-}"
+          shift 2
+          ;;
+        --path)
+          path="${2:-}"
+          shift 2
+          ;;
+        -*)
+          echo "kupol scan: unknown option: $1" >&2
+          usage >&2
+          exit 1
+          ;;
+        *)
+          path="$1"
+          shift
+          ;;
+      esac
+    done
+    if [ -n "$output" ]; then
+      exec "$ENGINE" scan --path "$path" --format "$format" --output "$output"
+    else
+      exec "$ENGINE" scan --path "$path" --format "$format"
+    fi
+    ;;
+  serve|init|mcp|info|demo)
+    exec "$ENGINE" "$CMD" "$@"
+    ;;
+  *)
+    echo "kupol: unknown command: $CMD" >&2
+    usage >&2
+    exit 1
+    ;;
+esac

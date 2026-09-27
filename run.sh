@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# 🚀 run.sh — Запуск Duo Architecture Guardian
+# 🚀 run.sh — Запуск KUPOL (engine binary: duo-agents)
 # ============================================================================
 # Использование:
 #   ./run.sh              # Запуск Web UI + API (http://localhost:3000)
@@ -40,7 +40,7 @@ case "$CMD" in
     serve|ui|web|start)
         echo -e "${CYAN}"
         echo "  ╔══════════════════════════════════════════════════════╗"
-        echo "  ║  🛡️  Duo Architecture Guardian — Web Server          ║"
+        echo "  ║  KUPOL — Web Server                                  ║"
         echo "  ╚══════════════════════════════════════════════════════╝"
         echo -e "${NC}"
         $BIN serve --port "${PORT:-3000}" "$@"
@@ -79,7 +79,7 @@ case "$CMD" in
     help|-h|--help)
         echo -e "${CYAN}"
         echo "  ╔══════════════════════════════════════════════════════╗"
-        echo "  ║  🛡️  Duo Architecture Guardian — Help                ║"
+        echo "  ║  KUPOL — Help                                        ║"
         echo "  ╚══════════════════════════════════════════════════════╝"
         echo -e "${NC}"
         echo -e "  ${GREEN}serve${NC}  (default)    Web UI + API (http://localhost:3000)"

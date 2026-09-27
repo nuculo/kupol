@@ -2,51 +2,55 @@
 
 Security dome over your repo.
 
-KUPOL is the product shell around the **duo-agents** engine (Duo Architecture Guardian): multi-agent security and architecture review for a codebase. Engine **source** lives in this repo. The compiled `duo-agents` binary (~15MB) is **not** in git — download it from [GitHub Releases](https://github.com/rustoman-AI/kupol/releases).
+KUPOL scans a local codebase for security findings and prints a report. It is a standalone product at [kupol.app](https://kupol.app). Not affiliated with GitLab.
 
-Upstream engine license in-tree is **MIT** (see `LICENSE`). The release tarball is the supported binary distribution.
+The public command is `kupol`. The engine crate in this repo is still named `duo-agents` so `cargo build` stays unchanged. Compiled engine binaries and `*.tar.gz` are not in git — they live in [Releases](https://github.com/rustoman-AI/kupol/releases).
 
-## Architecture (CTO)
+## Install from Releases
 
-Closed core / open shell, unchanged from the engine:
-
-| Piece | Path |
-| --- | --- |
-| Open shell (CLI, actors, Axum, dashboard) | `src/`, `dashboard/` |
-| Closed core (KAN, scan, policy, blast-radius) | `duo-kan/` |
-| Product + architecture draft | `docs/Arch/` |
-| Compiled engine | GitHub Releases (`duo-agents-v1.0-Release.tar.gz`) |
-
-```
-GitLab Duo / your repo
-        │
-        ▼
-   KUPOL (this product)
-        │
-        ▼
-   duo-agents engine  →  duo-kan core
-```
-
-## Quick start
-
-**From source**
+1. Download `duo-agents-v1.0-Release.tar.gz` from [Releases](https://github.com/rustoman-AI/kupol/releases).
+2. Extract. The engine binary is `release_build/duo-agents`.
+3. From this repo:
 
 ```bash
+chmod +x install.sh bin/kupol
+./install.sh ./release_build/duo-agents
+```
+
+`install.sh` copies `bin/kupol` to `~/.local/bin`. If you pass an engine path, it copies that binary too (as `duo-agents`). Put `~/.local/bin` on your `PATH`.
+
+Or point at an unpacked engine without copying it:
+
+```bash
+export KUPOL_BIN=/path/to/duo-agents
+./bin/kupol scan .
+```
+
+## Install from source
+
+```bash
+git clone https://github.com/rustoman-AI/kupol.git
+cd kupol
 cargo build --release
-./run.sh
-./run.sh scan /path/to/code
+./install.sh ./target/release/duo-agents
 ```
 
-**From the v1.0 release tarball**
+## Commands
 
 ```bash
-tar -xzf duo-agents-v1.0-Release.tar.gz
-# binary: release_build/duo-agents
-# architecture notes: release_build/docs/
+kupol scan [path] [-f table|json|markdown] [-o file]
+kupol serve
+kupol init
+kupol mcp
+kupol info
+kupol demo
+kupol help
 ```
 
-Do not `git add` `duo-agents` or the `.tar.gz`.
+`kupol` locates the engine in this order: `$KUPOL_BIN`, `duo-agents` on `PATH`, `./target/release/duo-agents`, `./release_build/duo-agents`.
 
-## Engine README
+## License
 
-The original Duo Architecture Guardian write-up (hackathon agents, CI, stack) is in `docs/duo-agents-readme.md`.
+[MIT](LICENSE)
+
+https://kupol.app

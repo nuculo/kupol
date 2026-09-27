@@ -1,8 +1,8 @@
-# 🛡️ Duo Architecture Guardian — Руководство (Walkthrough)
+# KUPOL — Walkthrough
 
 ## Что было создано
 
-AI Security Agent для хакатона GitLab Duo — платформа сканирования уязвимостей кода с **CLI**, **REST API**, **React Dashboard** и **12 Rust акторами**.
+Security scanner for a local repo — CLI, REST API, React dashboard, and Rust actors.
 
 Архитектура вдохновлена подходом **promptfoo**: Плагин → Оценщик (Grader) → Пайплайн Отчета.
 
@@ -61,7 +61,7 @@ AI Security Agent для хакатона GitLab Duo — платформа ск
 
 ## Интеграция с GitLab (Этапы 5 и 6)
 
-Duo Architecture Guardian способен нативно встраиваться в пайплайны GitLab CI/CD, предоставляя автоматизированные ревью безопасности с помощью ИИ (AI Security Reviews) для Merge Requests.
+KUPOL встраивается в пайплайны GitLab CI/CD (опциональный git-хост, как GitHub) и пишет отчёт по изменениям.
 
 **Шаг 1: Генерация Пайплайна**
 В корне вашего репозитория запустите команду `init` для автоматической генерации преднастроенного файла `.gitlab-ci.yml`:
@@ -80,7 +80,7 @@ duo-agents scan src/ --mr $CI_MERGE_REQUEST_IID --project $CI_PROJECT_ID
 
 ## Интеграция MCP Сервера (Model Context Protocol) (Этап 8)
 
-Duo Architecture Guardian может опционально запускаться как **MCP Сервер** (через stdio JSON-RPC мост), что позволяет любой MCP-совместимой среде (Cursor, Claude Desktop, AI-агенты) нативно использовать его возможности сканирования локально.
+KUPOL может опционально запускаться как **MCP Сервер** (через stdio JSON-RPC мост), что позволяет любой MCP-совместимой среде (Cursor, Claude Desktop, AI-агенты) нативно использовать его возможности сканирования локально.
 
 **Запуск сервера:**
 ```json
