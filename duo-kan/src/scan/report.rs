@@ -8,18 +8,14 @@ use tabled::{Table, Tabled, settings::Style};
 
 #[derive(Tabled)]
 struct FindingRow {
-    #[tabled(rename = "")]
-    emoji: String,
     #[tabled(rename = "Severity")]
     severity: String,
-    #[tabled(rename = "Plugin")]
+    #[tabled(rename = "Check")]
     plugin: String,
-    #[tabled(rename = "Title")]
+    #[tabled(rename = "Finding")]
     title: String,
-    #[tabled(rename = "File")]
-    file: String,
-    #[tabled(rename = "Line")]
-    line: String,
+    #[tabled(rename = "Location")]
+    location: String,
     #[tabled(rename = "CWE")]
     cwe: String,
 }
@@ -28,7 +24,7 @@ struct FindingRow {
 pub fn print_table(result: &ScanResult) {
     println!();
     println!("{}", "━".repeat(70).dimmed());
-    println!("  {} {}", "🛡️  Duo Architecture Guardian".bold(), format!("v{}", env!("CARGO_PKG_VERSION")).dimmed());
+    println!("  {} {}", "KUPOL security scan".bold(), format!("v{}", env!("CARGO_PKG_VERSION")).dimmed());
     println!("{}", "━".repeat(70).dimmed());
     println!();
     println!("  {} {}",  "ID:".dimmed(),       &result.id);
@@ -45,37 +41,40 @@ pub fn print_table(result: &ScanResult) {
     }
 
     let rows: Vec<FindingRow> = result.findings.iter().map(|f| {
+        let label = format!("{} {}", f.severity.emoji(), f.severity);
         let severity_str = match f.severity {
-            Severity::Critical => f.severity.to_string().red().bold().to_string(),
-            Severity::High     => f.severity.to_string().yellow().bold().to_string(),
-            Severity::Medium   => f.severity.to_string().yellow().to_string(),
-            Severity::Low      => f.severity.to_string().green().to_string(),
-            Severity::Info     => f.severity.to_string().dimmed().to_string(),
+            Severity::Critical => label.red().bold().to_string(),
+            Severity::High     => label.red().to_string(),
+            Severity::Medium   => label.yellow().to_string(),
+            Severity::Low      => label.green().to_string(),
+            Severity::Info     => label.dimmed().to_string(),
         };
 
-        // Shorten file path (safe for UTF-8)
-        let short_file = if f.file.chars().count() > 35 {
-            let skip = f.file.chars().count() - 32;
+        // Combine file:line, shortening the path safely for UTF-8.
+        let file = if f.file.chars().count() > 34 {
+            let skip = f.file.chars().count() - 31;
             format!("...{}", f.file.chars().skip(skip).collect::<String>())
         } else {
             f.file.clone()
         };
+        let location = match f.line {
+            Some(l) => format!("{}:{}", file, l),
+            None => file,
+        };
 
         // Safe truncation for title
-        let short_title = if f.title.chars().count() > 40 {
-            format!("{}...", f.title.chars().take(37).collect::<String>())
+        let short_title = if f.title.chars().count() > 44 {
+            format!("{}...", f.title.chars().take(41).collect::<String>())
         } else {
             f.title.clone()
         };
 
         FindingRow {
-            emoji: f.severity.emoji().to_string(),
             severity: severity_str,
             plugin: f.plugin.clone(),
             title: short_title,
-            file: short_file,
-            line: f.line.map(|l| l.to_string()).unwrap_or_default(),
-            cwe: f.cwe.clone().unwrap_or_default(),
+            location,
+            cwe: f.cwe.clone().unwrap_or_else(|| "—".into()),
         }
     }).collect();
 
@@ -107,7 +106,7 @@ pub fn to_json(result: &ScanResult) -> String {
 /// Экспорт в Markdown
 pub fn to_markdown(result: &ScanResult) -> String {
     let mut md = String::new();
-    md.push_str(&format!("# 🛡️ Security Scan Report\n\n"));
+    md.push_str("# KUPOL security scan report\n\n");
     md.push_str(&format!("- **ID:** {}\n", result.id));
     md.push_str(&format!("- **Target:** {}\n", result.target));
     md.push_str(&format!("- **Date:** {}\n", result.timestamp.format("%Y-%m-%d %H:%M:%S UTC")));

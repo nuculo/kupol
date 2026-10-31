@@ -1,13 +1,16 @@
-use anyhow::Result;
 use tokio::time::Duration;
 use tokio::sync::{mpsc, broadcast};
+use tokio::net::TcpListener;
 use tracing::{info, warn, error};
 use std::collections::HashMap;
+use axum::{routing::{get, post}, Json, Router};
+use tower_http::cors::{Any, CorsLayer};
 
-use crate::{*, protocol::*, models::*, actor::*, actors::*, orchestrator::*};
+use crate::{*, protocol::*, models::*, actor::*};
+use crate::actors;
 
 pub async fn run_demos() -> anyhow::Result<()> {
-    info!("🚀 Запуск Duo Agent Platform (YDB Enterprise v3: 2-Phase + Heartbeat + PoisonPill)");
+    info!("Starting KUPOL multi-agent demo (2-phase actors, heartbeat, poison-pill)");
 
     let (telemetry_tx, _telemetry_rx) = broadcast::channel::<String>(100);
     let ws_telemetry_tx = telemetry_tx.clone();
@@ -129,7 +132,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 🎭 ДЕМО 0: YDB NODE BROKER (Динамическое создание акторов)
     // ═════════════════════════════════════════════════════════════════════════
     println!("\n=======================================================");
-    println!("👉 ДЕМО 0: YDB Node Broker (`TTxRegisterNode` + `DynBitMap`)");
+    println!("DEMO 0: YDB Node Broker (`TTxRegisterNode` + `DynBitMap`)");
     println!("=======================================================\n");
     let _ = broker_tx.send(Message::SubscribeNodes { subscriber_name: "FlowOrchestratorActor" }).await;
     tokio::time::sleep(Duration::from_millis(100)).await;
@@ -145,7 +148,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 🎭 ДЕМО 1: 2-ФАЗНЫЙ Execute/Complete + Дельта-протокол
     // ═════════════════════════════════════════════════════════════════════════
     println!("\n=======================================================");
-    println!("👉 ДЕМО 1: 2-Phase Execute/Complete + Delta Protocol");
+    println!("DEMO 1: 2-Phase Execute/Complete + Delta Protocol");
     println!("=======================================================\n");
     let ev1 = MergeRequestEvent { mr_id: 300, title: "Feature: Load users".into(), author: "Timur".into(), changed_files: vec!["src/test_frontend.rs".into()] };
     let _ = orch_tx.send(Message::MergeRequestCreated { mr: ev1 }).await;
@@ -155,7 +158,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 🎭 ДЕМО 2: LEASE TIMEOUT + HEARTBEAT (Самовосстановление)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 2: Heartbeat + Lease Timeout (Self-Healing)");
+    println!("DEMO 2: Heartbeat + Lease Timeout (Self-Healing)");
     println!("=======================================================\n");
     let ev2 = MergeRequestEvent { mr_id: 555, title: "Feature: Heavy analysis".into(), author: "Timur".into(), changed_files: vec!["src/test_api.rs".into()] };
     let _ = orch_tx.send(Message::MergeRequestCreated { mr: ev2 }).await;
@@ -165,7 +168,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 🎭 ДЕМО 3: VECTOR ANN СЕМАНТИЧЕСКИЙ ДРИФТ
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 3: Vector ANN Semantic Drift (Изобретённый Велосипед)");
+    println!("DEMO 3: Vector ANN Semantic Drift (Изобретённый Велосипед)");
     println!("=======================================================\n");
     let ev3 = MergeRequestEvent { mr_id: 400, title: "Feature: Implement Custom JWT Auth".into(), author: "Timur".into(), changed_files: vec!["src/test_api.rs".into()] };
     let _ = orch_tx.send(Message::MergeRequestCreated { mr: ev3 }).await;
@@ -175,7 +178,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 🌊 ДЕМО 3.5: STREAMING PIPELINE (core.async из Clojure KAN)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 3.5: Streaming MR Pipeline (Sliding Window)");
+    println!("DEMO 3.5: Streaming MR Pipeline (Sliding Window)");
     println!("=======================================================\n");
     crate::kan_intelligence::infrastructure::streaming::demo_streaming_pipeline().await;
     tokio::time::sleep(Duration::from_millis(300)).await;
@@ -184,7 +187,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // ❄️ ДЕМО 5: SYMBOLIC DISCOVERY (Edge Freezing из Clojure KAN)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 5: Symbolic Discovery (Edge Freezing)");
+    println!("DEMO 5: Symbolic Discovery (Edge Freezing)");
     println!("=======================================================\n");
     let mut discoverer = crate::kan_intelligence::ml_core::symbolic::SymbolicDiscoverer::new(3);
     let sample_payload = "fn main() { let x = Option::Some(1); println!(\"{}\", x.unwrap()); }";
@@ -207,7 +210,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // ⚔️ ДЕМО 6: BABYLONIAN 60-HEAD ПОЛИ-СКАНИРОВАНИЕ
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 6: Babylonian 60-Head Poly-Scanning");
+    println!("DEMO 6: Babylonian 60-Head Poly-Scanning");
     println!("=======================================================\n");
     let swarm = crate::babylonian::BabylonianSwarm::new();
     let payload = "fn main() { unsafe { raw_query(\"SELECT *\"); } unwrap(); }".to_string();
@@ -224,7 +227,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 📊 ДЕМО 7: CONTEXT CROSSOVERS (Подавление ложных срабатываний)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 7: Context Crossovers (False Positive Suppression)");
+    println!("DEMO 7: Context Crossovers (False Positive Suppression)");
     println!("=======================================================\n");
     let detector = crate::crossover::CrossoverDetector::new();
 
@@ -254,7 +257,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 🛡️ ДЕМО 8: MUTABLE CORE / IMMUTABLE SHELL
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 8: Mutable Core / Immutable Shell (из tensor_v2.clj)");
+    println!("DEMO 8: Mutable Core / Immutable Shell (из tensor_v2.clj)");
     println!("=======================================================\n");
     let core = crate::kan_intelligence::ml_core::hybrid_state::MutablePerformanceCore::new();
     let start_time = tokio::time::Instant::now();
@@ -276,7 +279,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 🏎️ ДЕМО 10: A2A ТЕЛЕКОМ-ПРИМИТИВЫ (Erlang/OTP паттерны)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 10: A2A High-Performance Primitives (11M msg/sec)");
+    println!("DEMO 10: A2A High-Performance Primitives (11M msg/sec)");
     println!("=======================================================\n");
 
     // A. Circuit Breaker (Анти-DDoS)
@@ -316,7 +319,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // ☢️ ДЕМО 12: CYCLONEDX BLAST-RADIUS & TRUST DECAY
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 12: CycloneDX Blast-Radius & Trust Decay");
+    println!("DEMO 12: CycloneDX Blast-Radius & Trust Decay");
     println!("=======================================================\n");
 
     info!("☢️  [BlastRadius] Построение EntityGraph вокруг заражённой DB-функции...");
@@ -356,7 +359,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 🧬 ДЕМО 13: ЭВОЛЮЦИОННЫЙ NAS ДЛЯ ПРАВИЛ БЕЗОПАСНОСТИ
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 13: Evolutionary NAS for Security Rules");
+    println!("DEMO 13: Evolutionary NAS for Security Rules");
     println!("=======================================================\n");
 
     info!("🧬 [Evolution] Запуск генетического алгоритма: 30 геномов × 30 поколений...");
@@ -367,7 +370,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 💾 ДЕМО 14: CHECKPOINT/RESUME ПАЙПЛАЙНА
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 14: Pipeline Checkpoint/Resume (Crash Resilience)");
+    println!("DEMO 14: Pipeline Checkpoint/Resume (Crash Resilience)");
     println!("=======================================================\n");
 
     crate::kan_intelligence::pipeline::checkpoint::demo_checkpoint_resume();
@@ -377,7 +380,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // ⏳ ДЕМО 15: EARLY STOPPING ДЛЯ ACTOR LEASE
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 15: Early Stopping for Actor Lease");
+    println!("DEMO 15: Early Stopping for Actor Lease");
     println!("=======================================================\n");
 
     crate::kan_intelligence::pipeline::early_stopping::demo_early_stopping();
@@ -387,7 +390,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 🔬 ДЕМО 16: OPERATOR ALGEBRA ДЛЯ AST-ТРАНСФОРМАЦИЙ
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 16: Operator Algebra for AST Transforms");
+    println!("DEMO 16: Operator Algebra for AST Transforms");
     println!("=======================================================\n");
 
     crate::kan_intelligence::ml_core::operator_algebra::demo_operator_algebra();
@@ -397,7 +400,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 🌊 ДЕМО 17: NORMALIZING FLOW — ОБНАРУЖЕНИЕ АНОМАЛИЙ
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 17: Normalizing Flow — Supply Chain Attack Detection");
+    println!("DEMO 17: Normalizing Flow — Supply Chain Attack Detection");
     println!("=======================================================\n");
 
     crate::kan_intelligence::ml_core::normalizing_flow::demo_normalizing_flow();
@@ -407,7 +410,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 🔧 ДЕМО 18: LORA-АДАПТАЦИЯ ЗАМОРОЖЕННЫХ ПРАВИЛ
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 18: LoRA Adaptation for Frozen Security Rules");
+    println!("DEMO 18: LoRA Adaptation for Frozen Security Rules");
     println!("=======================================================\n");
 
     crate::kan_intelligence::security_rules::lora_rules::demo_lora_rules();
@@ -417,7 +420,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 📈 ДЕМО 19: LESLIE SMITH LR FINDER
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 19: Leslie Smith LR Finder — Threshold Auto-Tuning");
+    println!("DEMO 19: Leslie Smith LR Finder — Threshold Auto-Tuning");
     println!("=======================================================\n");
 
     crate::kan_intelligence::pipeline::lr_finder::demo_lr_finder();
@@ -427,7 +430,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 🐸 ДЕМО 21: TEMPORAL KAN (BOILING FROG DEFENSE)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 21: Temporal KAN — Boiling Frog Defense");
+    println!("DEMO 21: Temporal KAN — Boiling Frog Defense");
     println!("=======================================================\n");
 
     info!("🐸 [T-KAN] Инициализация Temporal KAN с критическим порогом 1.0...");
@@ -456,7 +459,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 🎭 ДЕМО 22: SECURITY PHI-PROTOCOL (POLYMORPHIC PLUGINS)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 22: Security Phi-Protocol — Graceful Degradation");
+    println!("DEMO 22: Security Phi-Protocol — Graceful Degradation");
     println!("=======================================================\n");
 
     info!("🎭 [Phi] Имитация сканирования маленького файла (4 КБ)...");
@@ -478,7 +481,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 📊 ДЕМО 23: DPO LOSS — АДАПТИВНЫЙ СКОРИНГ УЯЗВИМОСТЕЙ
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 23: DPO Loss — Adaptive Vulnerability Ranking");
+    println!("DEMO 23: DPO Loss — Adaptive Vulnerability Ranking");
     println!("=======================================================\n");
 
     info!("📊 [DPO] Инициализация DPO Scorer для банковской организации...");
@@ -514,7 +517,7 @@ pub async fn run_demos() -> anyhow::Result<()> {
     // 🧠 ДЕМО 24: MULTI-HEAD SECURITY ATTENTION
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 24: Multi-Head Security Attention (Context Analysis)");
+    println!("DEMO 24: Multi-Head Security Attention (Context Analysis)");
     println!("=======================================================\n");
 
     let attention = crate::kan::attention::SecurityAttention::new();
@@ -564,7 +567,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🧬 ДЕМО 25: SYMBOLIC DISCOVERY — АВТОМАТИЧЕСКОЕ СОЗДАНИЕ ПРАВИЛ
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 25: Symbolic Discovery — Auto Rule Generation");
+    println!("DEMO 25: Symbolic Discovery — Auto Rule Generation");
     println!("=======================================================\n");
 
     use crate::kan::symbolic::{SymbolicDiscoverer, Observation};
@@ -641,7 +644,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🤖 ДЕМО 26: AGENT KAN — ε-GREEDY САМОЭВОЛЮЦИЯ ПЛАГИНОВ
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 26: Agent KAN — ε-Greedy Self-Evolving Plugins");
+    println!("DEMO 26: Agent KAN — ε-Greedy Self-Evolving Plugins");
     println!("=======================================================\n");
 
     use crate::kan::agent::AgentPlugin;
@@ -698,7 +701,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🧠 ДЕМО 27: RAG VULNERABILITY KNOWLEDGE BASE
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 27: RAG — Vulnerability Knowledge Base");
+    println!("DEMO 27: RAG — Vulnerability Knowledge Base");
     println!("=======================================================\n");
 
     use crate::kan::rag::VulnKnowledgeBase;
@@ -744,7 +747,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // ⚡ ДЕМО 28: GRADIENT CLIPPING + EARLY STOPPING
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 28: Gradient Clipping + Early Stopping");
+    println!("DEMO 28: Gradient Clipping + Early Stopping");
     println!("=======================================================\n");
 
     use crate::kan::training_utils::{GradientClipper, EarlyStopper};
@@ -801,7 +804,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🔀 ДЕМО 29: LAZY DAG PIPELINE (XLA-STYLE OPTIMIZATION)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 29: Lazy DAG Pipeline — XLA-style Optimization");
+    println!("DEMO 29: Lazy DAG Pipeline — XLA-style Optimization");
     println!("=======================================================\n");
 
     use crate::scan::dag::{ScanDag, PluginDeclaration, Requirement};
@@ -856,7 +859,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🧬 ДЕМО 30: LoRA FINE-TUNING FOR PLUGIN RULES
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 30: LoRA — Low-Rank Adaptation для плагинов");
+    println!("DEMO 30: LoRA — Low-Rank Adaptation для плагинов");
     println!("=======================================================\n");
 
     use crate::kan::lora::{LoraPlugin, LoraAdapter};
@@ -911,7 +914,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 📡 ДЕМО 31: SSE STREAMING FINDINGS (REAL-TIME OUTPUT)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 31: SSE Streaming — Real-Time Scan Output");
+    println!("DEMO 31: SSE Streaming — Real-Time Scan Output");
     println!("=======================================================\n");
 
     use crate::scan::stream::FindingStream;
@@ -974,7 +977,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 📐 ДЕМО 32: KAT DSL — COMPOSABLE RULE ALGEBRA
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 32: KAT DSL — Security Rule Algebra");
+    println!("DEMO 32: KAT DSL — Security Rule Algebra");
     println!("=======================================================\n");
 
     use crate::scan::dsl;
@@ -1047,7 +1050,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🎲 ДЕМО 33: NUCLEUS FUZZY MATCHING (PROBABILISTIC SCAN)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 33: Nucleus Fuzzy Matching — Probabilistic Scan");
+    println!("DEMO 33: Nucleus Fuzzy Matching — Probabilistic Scan");
     println!("=======================================================\n");
 
     use crate::scan::fuzzy::NucleusFuzzyScanner;
@@ -1092,7 +1095,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🌐 ДЕМО 34: SPARSE MOE ROUTING (INFINITE RULESETS VIA INVERTED INDEX)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 34: Sparse MoE Routing — 1,000,000 Rules Index");
+    println!("DEMO 34: Sparse MoE Routing — 1,000,000 Rules Index");
     println!("=======================================================\n");
 
     use crate::scan::sparse_router::{SparseRouter, AstFeature};
@@ -1164,7 +1167,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🕸️ ДЕМО 35: ENTITY CRDT (COLLABORATIVE KNOWLEDGE GRAPH)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 35: Entity CRDT — P2P Knowledge Graph Sync");
+    println!("DEMO 35: Entity CRDT — P2P Knowledge Graph Sync");
     println!("=======================================================\n");
 
     use crate::scan::crdt::KnowledgeGraph;
@@ -1220,7 +1223,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 📈 ДЕМО 36: NEURAL ODE (CONTINUOUS-TIME RISK DYNAMICS)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 36: Neural ODE — Predictive Risk Dynamics");
+    println!("DEMO 36: Neural ODE — Predictive Risk Dynamics");
     println!("=======================================================\n");
 
     use crate::scan::ode::{OdeSolver, VulnState, RiskDynamicsPresets};
@@ -1275,7 +1278,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🎲 ДЕМО 37: TENSOR EMBEDDING (3D FACTORIZED VULNERABILITY PROFILING)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 37: Tensor Embedding — 3D Vuln Profiling & Contraction");
+    println!("DEMO 37: Tensor Embedding — 3D Vuln Profiling & Contraction");
     println!("=======================================================\n");
 
     use crate::scan::tensor_profile::{ProjectTensor, VulnProfile, Layer, Vector, Severity};
@@ -1324,7 +1327,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🗜️ ДЕМО 38: SCALAR QUANTIZATION (INT8 КОМПРЕССИЯ НЕЙРОННОГО ДВИЖКА)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 38: INT8 Scalar Quantization — 8x Memory Reduction");
+    println!("DEMO 38: INT8 Scalar Quantization — 8x Memory Reduction");
     println!("=======================================================\n");
 
     use crate::scan::quantize::Quantizer;
@@ -1377,7 +1380,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🛡️ ДЕМО 39: TYPE-SAFE RULE ENGINE (PHANTOMDATA / GADT SIMULATION)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 39: Type-Safe Rule Engine — Compile-Time Context Validation");
+    println!("DEMO 39: Type-Safe Rule Engine — Compile-Time Context Validation");
     println!("=======================================================\n");
 
     use crate::scan::gadt_rule::{
@@ -1430,7 +1433,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🕸️ ДЕМО 40: GRAPH KAN ROUTING (PETGRAPH + EDGES SUPPLY CHAIN INTELLIGENCE)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 40: Graph KAN Routing — Supply Chain Intelligence");
+    println!("DEMO 40: Graph KAN Routing — Supply Chain Intelligence");
     println!("=======================================================\n");
 
     use crate::scan::graph_kan::DependencyGraph;
@@ -1483,7 +1486,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🧮 ДЕМО 41: FORWARD AD SENSITIVITY ANALYSIS (DUAL NUMBERS)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 41: Forward AD Sensitivity (Dual Numbers)");
+    println!("DEMO 41: Forward AD Sensitivity (Dual Numbers)");
     println!("=======================================================\n");
 
     use crate::scan::forward_ad::{Dual, SecurityRuleEngine};
@@ -1533,7 +1536,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🦎 ДЕМО 42: LORA EDGE ADAPTERS FOR ANOMALY SURGES
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 42: LoRA Edge Adapters (Аномальные всплески)");
+    println!("DEMO 42: LoRA Edge Adapters (Аномальные всплески)");
     println!("=======================================================\n");
 
     use crate::scan::lora_edge::AnomalyLoraGraph;
@@ -1588,7 +1591,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🔮 ДЕМО 43: WHAT-IF SCENARIO MODELING (GRAPH INCREMENTAL CACHE)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 43: What-If Сценарии (KV-Cache Графа)");
+    println!("DEMO 43: What-If Сценарии (KV-Cache Графа)");
     println!("=======================================================\n");
 
     use crate::scan::what_if::ScenarioSimulatorGraph;
@@ -1645,7 +1648,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🪐 ДЕМО 44: GRAVITY ATTENTION (Тензор Эйнштейна для кода)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 44: Gravity Attention (General Relativity of Code)");
+    println!("DEMO 44: Gravity Attention (General Relativity of Code)");
     println!("=======================================================\n");
 
     use crate::scan::gravity::GravitySpacetime;
@@ -1695,7 +1698,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 📈 ДЕМО 45: ACCELERATION DETECTOR (d²E/dt² JERK SECURITY)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 45: Acceleration Detector (Jerk Security)");
+    println!("DEMO 45: Acceleration Detector (Jerk Security)");
     println!("=======================================================\n");
 
     use crate::scan::accel_detector::AccelerationDetector;
@@ -1739,7 +1742,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🏛️ ДЕМО 46: BABYLON BASIS CACHE (O(log n) SPLINE LOOKUP)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 46: Babylon Basis Cache (3000 г. до н.э.)");
+    println!("DEMO 46: Babylon Basis Cache (3000 г. до н.э.)");
     println!("=======================================================\n");
 
     use crate::scan::basis_cache::BabylonBasisCache;
@@ -1790,7 +1793,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🚕 ДЕМО 47: SURGE PRICING FOR SCAN QUEUE
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 47: Surge Pricing (Anti-Starvation Queue)");
+    println!("DEMO 47: Surge Pricing (Anti-Starvation Queue)");
     println!("=======================================================\n");
 
     use crate::scan::surge_queue::SurgeScanQueue;
@@ -1844,7 +1847,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🎯 ДЕМО 48: ADAPTIVE GRID EXTENSION (COARSE-TO-FINE)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 48: Adaptive Grid (Babylon Schedule)");
+    println!("DEMO 48: Adaptive Grid (Babylon Schedule)");
     println!("=======================================================\n");
 
     use crate::scan::adaptive_grid::{PlateauDetector, AdaptiveKanGrid, BABYLON_GRID_SCHEDULE};
@@ -1894,7 +1897,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🌌 ДЕМО 49: GRAVITATIONAL REDSHIFT (СЕМАНТИЧЕСКИЙ СДВИГ)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 49: Gravitational Redshift (API Staleness)");
+    println!("DEMO 49: Gravitational Redshift (API Staleness)");
     println!("=======================================================\n");
 
     use crate::scan::redshift::RedshiftField;
@@ -1935,7 +1938,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🗄️ ДЕМО 50: KV-CACHE ДЛЯ ИНКРЕМЕНТАЛЬНОГО СКАНИРОВАНИЯ
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 50: KV-Cache (Prefill + Decode)");
+    println!("DEMO 50: KV-Cache (Prefill + Decode)");
     println!("=======================================================\n");
 
     use crate::scan::kv_cache::ScanKVCache;
@@ -2007,7 +2010,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // ⚡ ДЕМО 51: REVERSE-MODE AD (ANALYTICAL BACKPROP)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 51: Reverse-Mode AD (1 backward = ALL gradients)");
+    println!("DEMO 51: Reverse-Mode AD (1 backward = ALL gradients)");
     println!("=======================================================\n");
 
     use crate::scan::reverse_ad::lora_backward;
@@ -2072,7 +2075,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🤖 ДЕМО 52: DIFFERENTIABLE POLICY (KAN as RL AGENT)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 52: KAN Policy vs Round-Robin (RL Scan Agent)");
+    println!("DEMO 52: KAN Policy vs Round-Robin (RL Scan Agent)");
     println!("=======================================================\n");
 
     use crate::scan::scan_policy::{KanPolicy, ScanSimulator, SimFile};
@@ -2151,7 +2154,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🧊 ДЕМО 53: FROZEN/TRAINABLE SPLIT (Полиморфный AD)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 53: Frozen Core + LoRA Adapters");
+    println!("DEMO 53: Frozen Core + LoRA Adapters");
     println!("=======================================================\n");
 
     use crate::scan::frozen_trainable::{FrozenTrainableEngine, EvalMode};
@@ -2210,7 +2213,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🎲 ДЕМО 54: TOP-K SECURITY SAMPLING (Стохастический Аудит)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 54: Top-K Sampling (Exploration vs Exploitation)");
+    println!("DEMO 54: Top-K Sampling (Exploration vs Exploitation)");
     println!("=======================================================\n");
 
     use crate::scan::topk_sampler::{TopKSampler, ScanCandidate, ScanTemperature};
@@ -2267,7 +2270,7 @@ pub fn call_external(data: &mut [u8]) -> i32 {
     // 🎭 ДЕМО 20: POISONPILL КАСКАД (Graceful Shutdown)
     // ═════════════════════════════════════════════════════════════════════════
     println!("=======================================================");
-    println!("👉 ДЕМО 20: PoisonPill Cascade (Graceful Shutdown)");
+    println!("DEMO 20: PoisonPill Cascade (Graceful Shutdown)");
     println!("=======================================================\n");
     let _ = orch_ast_tx.send(Message::PoisonPill).await;
     let _ = orch_sec_tx.send(Message::PoisonPill).await;

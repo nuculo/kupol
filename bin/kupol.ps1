@@ -19,11 +19,10 @@ Usage:
   kupol help
 
 --fail-on: exit 1 if any finding is at least that severe (critical > high > medium > low).
-If omitted, exit with the engine's status.
+If omitted, the engine reads fail_on from .kupol.yml (if set), otherwise exit 0.
 
-.kupol.yml: fail_on is the recommended CI default (pass it as --fail-on).
-ignore globs in .kupol.yml are planned — the engine has no ignore CLI flag yet
-(it already skips target/, node_modules/, and .git/ internally).
+.kupol.yml: ignore rules, min_severity, and the default fail_on. The engine reads
+it automatically and skips target/, node_modules/, and .git/ as well.
 
 Engine lookup: `$KUPOL_BIN, duo-agents on PATH,
 ./target/release/duo-agents, ./release_build/duo-agents

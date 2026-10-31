@@ -52,7 +52,7 @@ impl ScanWal {
             0
         };
 
-        tracing::info!("📝 [WAL] Открыт: {} (next_seq={})", wal_path, next_seq);
+        tracing::debug!("WAL opened: {} (next_seq={})", wal_path, next_seq);
 
         Self { wal_path, next_seq }
     }
@@ -118,7 +118,7 @@ impl ScanWal {
     pub fn truncate(&self) {
         if Path::new(&self.wal_path).exists() {
             let _ = std::fs::write(&self.wal_path, ""); // Truncate to empty
-            tracing::info!("🧹 [WAL] Truncated после checkpoint (seq reset)");
+            tracing::debug!("WAL truncated after checkpoint (seq reset)");
         }
     }
 
@@ -127,7 +127,7 @@ impl ScanWal {
         let path = Path::new(scan_root).join(WAL_FILE);
         if path.exists() {
             let _ = std::fs::remove_file(&path);
-            tracing::info!("🧹 [WAL] Удалён (сканирование завершено)");
+            tracing::debug!("WAL removed (scan complete)");
         }
     }
 

@@ -1,5 +1,10 @@
-# ignore is planned: the engine has no --ignore flag yet (it already skips
-# target/, node_modules/, .git/). fail_on is applied when you pass --fail-on.
+# KUPOL configuration.
+#
+# ignore:       extra path fragments to skip, on top of the built-in
+#               target/, node_modules/, and .git/.
+# min_severity: lowest severity to include in the report.
+# fail_on:      CI gate. When set, `kupol scan` exits 1 if any finding is at or
+#               above this severity. Override on the CLI with --fail-on.
 ignore:
   - target
   - node_modules

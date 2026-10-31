@@ -1,4 +1,3 @@
-use anyhow::Result;
 use axum::{
     extract::State,
     routing::{get, post},
@@ -10,7 +9,7 @@ use tower_http::services::ServeDir;
 use tokio::sync::broadcast;
 use std::sync::{Arc, Mutex};
 use tokio::net::TcpListener;
-use tracing::{info, warn, error};
+use tracing::info;
 
 use crate::{AppState, scan, orchestrator};
 
@@ -45,7 +44,7 @@ pub async fn run_server(port: u16) -> anyhow::Result<()> {
         .layer(cors);
 
     let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await?;
-    info!("🌐 Duo Architecture Guardian запущен!");
+    info!("KUPOL server started");
     info!("   Web UI:  http://localhost:{}", port);
     info!("   API:     http://localhost:{}/api/health", port);
     info!("   WS:      ws://localhost:{}/ws", port);
@@ -58,7 +57,7 @@ pub async fn api_health() -> impl IntoResponse {
     Json(serde_json::json!({
         "status": "ok",
         "version": env!("CARGO_PKG_VERSION"),
-        "name": "Duo Architecture Guardian"
+        "name": "KUPOL"
     }))
 }
 

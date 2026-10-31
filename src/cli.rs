@@ -1,101 +1,109 @@
-//! CLI модуль — clap-based интерфейс командной строки
+//! CLI module — clap-based command-line interface for the KUPOL engine.
 //!
-//! Команды:
-//! - `scan`   — запуск сканирования кода
-//! - `serve`  — запуск Web UI + API сервера
-//! - `report` — экспорт результатов
-//! - `demo`   — демо-сценарии
+//! Commands:
+//! - `scan`   — scan a codebase for security findings
+//! - `serve`  — start the Web UI + API server
+//! - `report` — export the results of a scan
+//! - `init`   — generate a CI pipeline template
+//! - `mcp`    — run as a Model Context Protocol server
+//! - `info`   — print engine information
+//! - `demo`   — run the multi-agent demo scenarios
 
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(
-    name = "duo-agent",
+    name = "kupol",
     version = env!("CARGO_PKG_VERSION"),
-    about = "🛡️  Duo Architecture Guardian — AI Security Agent for GitLab MR",
-    long_about = "AI-powered security scanning platform for GitLab Merge Requests.\nInspired by promptfoo red-team architecture."
+    about = "KUPOL — a local security scanner for your repository",
+    long_about = "KUPOL scans a local codebase for security findings and prints a report.\n\nThis binary is the KUPOL engine. The public command `kupol` wraps it and adds\nthe --fail-on CI gate. See https://kupol.app for details."
 )]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
 
-    /// Включить подробный вывод
+    /// Enable verbose output
     #[arg(short, long, global = true)]
     pub verbose: bool,
 }
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// 🔍 Запуск сканирования кода на уязвимости
+    /// Scan a codebase for security findings
     Scan {
-        /// Путь к директории или файлу для сканирования
+        /// Path to the directory or file to scan
         #[arg(short, long, default_value = ".")]
         path: String,
 
-        /// ID Merge Request в GitLab
+        /// Merge/pull request ID to comment on (optional git host integration)
         #[arg(long)]
         mr: Option<u64>,
 
-        /// ID проекта в GitLab
+        /// Project ID for the git host integration (optional)
         #[arg(long)]
         project: Option<String>,
 
-        /// Формат вывода: table, json, markdown
+        /// Output format: table, json, or markdown
         #[arg(short, long, default_value = "table")]
         format: String,
 
-        /// Файл для сохранения отчёта
+        /// Write the report to a file instead of stdout
         #[arg(short, long)]
         output: Option<String>,
 
-        /// Минимальный уровень severity для отображения
+        /// Minimum severity to report: info, low, medium, high, critical
         #[arg(long, default_value = "low")]
         min_severity: String,
+
+        /// Exit with code 1 if any finding is at least this severe
+        /// (info, low, medium, high, critical)
+        #[arg(long)]
+        fail_on: Option<String>,
     },
 
-    /// 🌐 Запуск Web UI + API сервера
+    /// Start the Web UI + API server
     Serve {
-        /// Порт для сервера
+        /// Port to bind the server to
         #[arg(short, long, default_value = "3000")]
         port: u16,
 
-        /// Отключить автооткрытие браузера
+        /// Do not open a browser automatically
         #[arg(long)]
         no_open: bool,
     },
 
-    /// 📊 Экспорт результатов последнего сканирования
+    /// Export the results of the last scan
     Report {
-        /// Формат: json, html, markdown, csv
+        /// Output format: json, markdown, or table
         #[arg(short, long, default_value = "json")]
         format: String,
 
-        /// Файл для вывода
+        /// Write the report to a file instead of stdout
         #[arg(short, long)]
         output: Option<String>,
     },
 
-    /// 🎭 Запуск демо-сценариев
+    /// Run the multi-agent demo scenarios
     Demo {
-        /// Номер демо-сценария (0-20, пусто = все)
+        /// Demo scenario number (empty = run all)
         #[arg(short, long)]
         number: Option<u32>,
     },
 
-    /// 🛠️  Генерация настроек для GitLab CI/CD (.gitlab-ci.yml)
+    /// Generate a CI pipeline template (.gitlab-ci.yml)
     Init {
-        /// Директория, в которой будет сгенерирован файл (по умолчанию: текущая)
+        /// Directory to generate the file in (default: current directory)
         #[arg(short, long, default_value = ".")]
         dir: String,
 
-        /// Перезаписать существующий файл
+        /// Overwrite an existing file
         #[arg(short, long)]
         force: bool,
     },
 
-    /// ℹ️  Показать информацию о системе
+    /// Print engine information
     Info,
 
-    /// 🤖 Запуск сервера Model Context Protocol (MCP) через stdio
+    /// Run as a Model Context Protocol (MCP) server over stdio
     Mcp,
 }

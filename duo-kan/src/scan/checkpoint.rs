@@ -42,8 +42,8 @@ impl ScanCheckpoint {
         if path.exists() {
             if let Ok(data) = std::fs::read_to_string(&path) {
                 if let Ok(ckpt) = serde_json::from_str::<ScanCheckpoint>(&data) {
-                    tracing::info!(
-                        "♻️  [Checkpoint] Восстановлен чекпоинт: {} файлов уже просканировано, {} findings",
+                    tracing::debug!(
+                        "checkpoint restored: {} files already scanned, {} findings",
                         ckpt.scanned_files.len(),
                         ckpt.findings.len()
                     );
@@ -60,8 +60,8 @@ impl ScanCheckpoint {
         let json = serde_json::to_string_pretty(self)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
         std::fs::write(&path, json)?;
-        tracing::info!(
-            "💾 [Checkpoint] Сохранён: {}/{} файлов, {} findings",
+        tracing::debug!(
+            "checkpoint saved: {}/{} files, {} findings",
             self.scanned_files.len(),
             self.total_files,
             self.findings.len()
@@ -74,7 +74,7 @@ impl ScanCheckpoint {
         let path = Path::new(scan_root).join(CHECKPOINT_FILE);
         if path.exists() {
             let _ = std::fs::remove_file(&path);
-            tracing::info!("🧹 [Checkpoint] Чекпоинт удалён (сканирование завершено)");
+            tracing::debug!("checkpoint removed (scan complete)");
         }
     }
 

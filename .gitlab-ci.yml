@@ -1,22 +1,20 @@
-# KUPOL — optional GitLab CI (same role as GitHub Actions)
+# KUPOL — optional GitLab CI (mirrors the GitHub Actions workflow)
 #
 # Stages:
-#   1. build    — Compile the Rust binary (crate name duo-agents)
-#   2. test     — Run cargo test
-#   3. security-review — Scan code on merge requests
+#   1. build    — compile the engine (internal crate name: duo-agents)
+#   2. test     — run cargo test
+#   3. security — scan the repo on merge requests and fail on high findings
 
 stages:
   - build
   - test
-  - security-review
+  - security
 
 variables:
   CARGO_HOME: "${CI_PROJECT_DIR}/.cargo"
   RUST_LOG: "info"
 
-# ─────────────────────────────────────────────────────────────
-# Cache cargo registry + build artifacts between jobs
-# ─────────────────────────────────────────────────────────────
+# Cache the cargo registry and build artifacts between jobs.
 .rust-cache: &rust-cache
   cache:
     key: "${CI_COMMIT_REF_SLUG}"
@@ -25,55 +23,39 @@ variables:
       - .cargo/git
       - target/
 
-# ─────────────────────────────────────────────────────────────
-# Stage 1: Build
-# ─────────────────────────────────────────────────────────────
 build:
   stage: build
   image: rust:1.80
   <<: *rust-cache
   script:
-    - echo "🔨 Компиляция KUPOL engine..."
-    - cargo build --release 2>&1
-    - echo "✅ Сборка завершена!"
+    - cargo build --release
   artifacts:
     paths:
       - target/release/duo-agents
     expire_in: 1 hour
 
-# ─────────────────────────────────────────────────────────────
-# Stage 2: Test
-# ─────────────────────────────────────────────────────────────
 test:
   stage: test
   image: rust:1.80
   <<: *rust-cache
   script:
-    - echo "🧪 Запуск тестов..."
-    - cargo test --release 2>&1 || true
-    - echo "✅ Тесты завершены!"
+    - cargo test --release || true
   dependencies:
     - build
 
-# ─────────────────────────────────────────────────────────────
-# Stage 3: Security Review (MR only)
-# ─────────────────────────────────────────────────────────────
-duo-agents-scan:
-  stage: security-review
+kupol-scan:
+  stage: security
   image: rust:1.80
   <<: *rust-cache
   only:
     - merge_requests
   script:
-    - echo "🔍 KUPOL security scan..."
-    - ./target/release/duo-agents scan src/ --format markdown --output report.md
-    - cat report.md
-    - echo "📝 Публикация отчёта в MR..."
-    - ./target/release/duo-agents scan src/ --mr $CI_MERGE_REQUEST_IID --project $CI_PROJECT_ID || true
+    - ./install.sh ./target/release/duo-agents
+    - kupol scan . -f markdown -o kupol-report.md --fail-on high
   dependencies:
     - build
   artifacts:
     paths:
-      - report.md
+      - kupol-report.md
     expire_in: 1 week
     when: always

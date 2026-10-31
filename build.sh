@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ============================================================================
-# 🔧 build.sh — Сборка KUPOL (crate: duo-agents)
+# build.sh — build KUPOL (engine crate: duo-agents)
 # ============================================================================
-# Использование:
-#   ./build.sh              # Полная сборка (Rust + Dashboard)
-#   ./build.sh --rust       # Только Rust backend
-#   ./build.sh --dashboard  # Только React dashboard
-#   ./build.sh --release    # Release-оптимизация
-#   ./build.sh --clean      # Чистая сборка
+# Usage:
+#   ./build.sh              # full build (Rust engine + dashboard)
+#   ./build.sh --rust       # Rust engine only
+#   ./build.sh --dashboard  # React dashboard only
+#   ./build.sh --release    # release optimization
+#   ./build.sh --clean      # clean build
 # ============================================================================
 
 set -euo pipefail
@@ -33,36 +33,31 @@ for arg in "$@"; do
         --release) RELEASE=true ;;
         --clean) CLEAN=true ;;
         --help|-h)
-            echo -e "${CYAN}🔧 KUPOL — Сборка${NC}"
+            echo -e "${CYAN}build.sh — build KUPOL${NC}"
             echo ""
-            echo "  --rust         Только Rust backend"
-            echo "  --dashboard    Только React dashboard"
-            echo "  --release      Release-оптимизация"
-            echo "  --clean        Чистая сборка"
+            echo "  --rust         Rust engine only"
+            echo "  --dashboard    React dashboard only"
+            echo "  --release      release optimization"
+            echo "  --clean        clean build"
             exit 0 ;;
-        *) echo -e "${RED}❌ Неизвестный аргумент: $arg${NC}"; exit 1 ;;
+        *) echo -e "${RED}Unknown argument: $arg${NC}"; exit 1 ;;
     esac
 done
 
-echo -e "${CYAN}"
-echo "  ╔══════════════════════════════════════════════════════╗"
-echo "  ║     KUPOL — Сборка                                   ║"
-echo "  ╚══════════════════════════════════════════════════════╝"
-echo -e "${NC}"
+echo -e "${CYAN}Building KUPOL${NC}"
 
 START_TIME=$(date +%s)
 
-# Clean
 if [ "$CLEAN" = true ]; then
-    echo -e "${YELLOW}🧹 Чистка...${NC}"
+    echo -e "${YELLOW}Cleaning...${NC}"
     cargo clean 2>/dev/null || true
     rm -rf dashboard/dist dashboard/node_modules 2>/dev/null || true
-    echo -e "${GREEN}✅ Чистка завершена${NC}"
+    echo -e "${GREEN}Clean complete${NC}"
 fi
 
-# Rust Backend
+# Rust engine
 if [ "$DASH_ONLY" = false ]; then
-    echo -e "${CYAN}▶ Сборка Rust backend...${NC}"
+    echo -e "${CYAN}Building Rust engine...${NC}"
     if [ "$RELEASE" = true ]; then
         cargo build --release 2>&1 | tail -5
         BIN="target/release/duo-agents"
@@ -70,36 +65,30 @@ if [ "$DASH_ONLY" = false ]; then
         cargo build 2>&1 | tail -5
         BIN="target/debug/duo-agents"
     fi
-    echo -e "${GREEN}✅ Rust backend собран: $BIN${NC}"
-
-    # Verify
-    VERSION=$(./$BIN info 2>/dev/null | grep "Guardian" | head -1 || echo "v0.1.0")
-    echo -e "${GREEN}   $VERSION${NC}"
+    echo -e "${GREEN}Engine built: $BIN${NC}"
+    ./"$BIN" info 2>/dev/null | head -2 || true
 fi
 
-# React Dashboard
+# React dashboard
 if [ "$RUST_ONLY" = false ] && [ -d "dashboard" ]; then
     echo ""
-    echo -e "${CYAN}▶ Сборка React Dashboard...${NC}"
+    echo -e "${CYAN}Building React dashboard...${NC}"
     cd dashboard
     if [ ! -d "node_modules" ]; then
         npm install --prefer-offline 2>&1 | tail -3
     fi
     npm run build 2>&1 | tail -5
     cd ..
-    echo -e "${GREEN}✅ Dashboard собран: dashboard/dist/${NC}"
+    echo -e "${GREEN}Dashboard built: dashboard/dist/${NC}"
 fi
 
-# Summary
 END_TIME=$(date +%s)
 ELAPSED=$((END_TIME - START_TIME))
 
 echo ""
-echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}✅ Сборка завершена за ${ELAPSED}с${NC}"
-echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}Build finished in ${ELAPSED}s${NC}"
 echo ""
-echo -e "  ${YELLOW}Запуск:${NC}  ./run.sh"
-echo -e "  ${YELLOW}Скан:${NC}    ./run.sh scan"
-echo -e "  ${YELLOW}Демо:${NC}    ./run.sh demo"
+echo -e "  ${YELLOW}Serve:${NC}  ./run.sh"
+echo -e "  ${YELLOW}Scan:${NC}   ./run.sh scan"
+echo -e "  ${YELLOW}Demo:${NC}   ./run.sh demo"
 echo ""

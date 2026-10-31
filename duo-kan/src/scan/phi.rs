@@ -32,9 +32,9 @@ impl SecurityPhi for RegexPhi {
             for rule in rules {
                 if trimmed.contains(rule.pattern) {
                     findings.push(Finding {
-                        plugin: format!("{} [{}]", plugin_name, self.engine_name()),
+                        plugin: plugin_name.to_string(),
                         severity: rule.severity.clone(),
-                        title: format!("Обнаружено: {}", rule.pattern),
+                        title: rule.description.to_string(),
                         description: rule.description.to_string(),
                         file: file_path.into(),
                         line: Some(i + 1),
@@ -59,12 +59,7 @@ impl SecurityPhi for SemanticPhi {
     fn execute(&self, plugin_name: &str, file_path: &str, content: &str, rules: &[PhiRule]) -> Vec<Finding> {
         std::thread::sleep(Duration::from_millis(15));
         
-        let mut findings = RegexPhi.execute(plugin_name, file_path, content, rules);
-        for f in &mut findings {
-            f.plugin = format!("{} [{}]", plugin_name, self.engine_name());
-            f.description = format!("(Семантический AST-вектор подтвердил намерение) {}", f.description);
-        }
-        findings
+        RegexPhi.execute(plugin_name, file_path, content, rules)
     }
 }
 

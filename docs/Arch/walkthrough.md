@@ -6,20 +6,6 @@ Security scanner for a local repo — CLI, REST API, React dashboard, and Rust a
 
 Архитектура вдохновлена подходом **promptfoo**: Плагин → Оценщик (Grader) → Пайплайн Отчета.
 
-## Скриншоты Дашборда
-
-````carousel
-![Главная страница — Hero-секция с кнопкой "Запустить Сканирование" и карточками фич](/home/timur/.gemini/antigravity/brain/ee1226dd-8757-4e8f-a078-d583fd6ba2e6/landing_page_1774165762259.png)
-<!-- slide -->
-![Обзорный Дашборд — 59 файлов, 124 находки, 174мс, Шкала Риска 10.0 CRITICAL, графики серьезности](/home/timur/.gemini/antigravity/brain/ee1226dd-8757-4e8f-a078-d583fd6ba2e6/dashboard_overview_1774165814103.png)
-<!-- slide -->
-![Таблица Результатов Сканирования — сортируемые/фильтруемые уязвимости с бейджами серьезности, плагинами и CWE ссылками](/home/timur/.gemini/antigravity/brain/ee1226dd-8757-4e8f-a078-d583fd6ba2e6/scan_results_table_1774165821238.png)
-<!-- slide -->
-![Граф Архитектуры — визуализация Радиуса Поражения (Угасания Доверия) с автоматической раскладкой Dagre](/home/timur/.gemini/antigravity/brain/ee1226dd-8757-4e8f-a078-d583fd6ba2e6/architecture_graph_v1_1774179822217.png)
-````
-
-![Полная запись сессии](/home/timur/.gemini/antigravity/brain/ee1226dd-8757-4e8f-a078-d583fd6ba2e6/graph_visualization_fixed_final_1774179798992.webp)
-
 ## Визуализация Графа в React (Этап 7)
 
 Наш Дашборд теперь включает выделенную **Вкладку Архитектуры**, полностью интегрированную с Rust бекендом (`/api/graph`).
@@ -74,7 +60,7 @@ KUPOL встраивается в пайплайны GitLab CI/CD (опцион�
 
 При каждом пуше кода сканер выполнит:
 ```bash
-duo-agents scan src/ --mr $CI_MERGE_REQUEST_IID --project $CI_PROJECT_ID
+kupol scan . -f markdown -o kupol-report.md --fail-on high
 ```
 Это обеспечивает мгновенное "Red Team" ревью кода без трения, прямо в стандартном рабочем процессе разработчика, публикуя Markdown-отчет о рисках текстом прямо в комментариях к MR.
 

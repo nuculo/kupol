@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 128" role="img" aria-labelledby="title">
+  <title id="title">KUPOL</title>
+  <path d="M16 80V64a48 48 0 0 1 96 0v16" fill="none" stroke="#22D3EE" stroke-width="12"/>
+  <path d="m48 48 8 10-22 22 22 22-8 10-32-32Zm32 0-8 10 22 22-22 22 8 10 32-32Z" fill="#F8FAFC"/>
+  <g fill="#F8FAFC" aria-hidden="true">
+    <path d="M148 32h12v27l25-27h16l-29 31 31 33h-17l-26-28v28h-12Z"/>
+    <path d="M214 32h12v40q0 14 14 14t14-14V32h12v40q0 25-26 25t-26-25Z"/>
+    <path fill-rule="evenodd" d="M282 96V32h27q23 0 23 21t-23 21h-15v22Zm12-52v18h15q11 0 11-9t-11-9Z"/>
+    <path fill-rule="evenodd" d="M372 31q29 0 29 33t-29 33q-29 0-29-33t29-33Zm0 12q-17 0-17 21t17 21q17 0 17-21t-17-21Z"/>
+    <path d="M417 32h12v52h37v12h-49Z"/>
+  </g>
+</svg>

@@ -1,185 +1,51 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>KUPOL — security dome over your repo</title>
-  <meta name="description" content="KUPOL scans your codebase locally and reports security findings. CLI: kupol. https://kupol.app" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg: #07080c;
-      --bg-2: #0e1118;
-      --line: rgba(255,255,255,.08);
-      --text: #e8edf5;
-      --muted: #8b95a8;
-      --lime: #7dff6b;
-      --ice: #5ee7ff;
-    }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", system-ui, sans-serif; }
-    body { min-height: 100vh; }
-    a { color: var(--ice); }
-    .wrap { width: min(1080px, calc(100% - 32px)); margin: 0 auto; }
-    header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 0; border-bottom: 1px solid var(--line);
-    }
-    .brand { font-weight: 700; letter-spacing: .18em; font-size: 14px; }
-    nav { display: flex; gap: 18px; align-items: center; font-size: 14px; }
-    nav a { color: var(--muted); text-decoration: none; }
-    .lang { display: flex; gap: 6px; }
-    .lang button {
-      background: transparent; border: 1px solid var(--line); color: var(--muted);
-      padding: 4px 8px; border-radius: 4px; cursor: pointer; font: inherit;
-    }
-    .lang button[aria-pressed="true"] { color: var(--bg); background: var(--lime); border-color: var(--lime); }
-    .hero { padding: 72px 0 48px; display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center; }
-    h1 { font-size: clamp(32px, 5vw, 56px); line-height: 1.05; margin: 0 0 16px; }
-    .lede { font-size: 18px; color: var(--muted); max-width: 40ch; }
-    .cta { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
-    .btn {
-      display: inline-block; text-decoration: none; padding: 12px 16px; border-radius: 6px;
-      font-weight: 600; font-size: 14px;
-    }
-    .btn-primary { background: var(--lime); color: #071008; }
-    .btn-ghost { border: 1px solid var(--line); color: var(--text); }
-    pre, code { font-family: "IBM Plex Mono", ui-monospace, monospace; }
-    .dome {
-      height: 280px; border: 1px solid var(--line); border-radius: 16px;
-      background:
-        radial-gradient(120% 80% at 50% 110%, rgba(125,255,107,.18), transparent 55%),
-        radial-gradient(80% 60% at 50% 0%, rgba(94,231,255,.12), transparent 50%),
-        var(--bg-2);
-      position: relative; overflow: hidden;
-    }
-    .dome::after {
-      content: ""; position: absolute; left: 10%; right: 10%; bottom: 18%;
-      height: 120px; border: 2px solid rgba(125,255,107,.55);
-      border-bottom: none; border-radius: 160px 160px 0 0;
-    }
-    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 16px 0 56px; }
-    .card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
-    .card h3 { margin: 0 0 8px; font-size: 16px; }
-    .card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
-    .n { color: var(--lime); font-family: "IBM Plex Mono", monospace; font-size: 12px; }
-    .pricing { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding-bottom: 64px; }
-    .price { font-size: 28px; font-weight: 700; margin: 8px 0 12px; }
-    .price span { font-size: 14px; color: var(--muted); font-weight: 400; }
-    .install {
-      background: #05060a; border: 1px solid var(--line); border-radius: 12px;
-      padding: 16px 18px; overflow-x: auto; font-size: 13px; line-height: 1.6;
-      color: #cfe7d4; margin: 12px 0 64px;
-    }
-    h2 { font-size: 22px; margin: 0 0 16px; }
-    footer { border-top: 1px solid var(--line); padding: 24px 0 40px; color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    [data-lang="ru"] .en, [data-lang="en"] .ru { display: none; }
-    @media (max-width: 800px) {
-      .hero, .steps, .pricing { grid-template-columns: 1fr; }
-      .hero { padding-top: 40px; }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KUPOL — Security dome over your repo</title>
+<meta name="description" content="Find vulnerabilities before they ship. KUPOL brings local code security scanning, multi-agent analysis, and severity-based CI gates to your repository.">
+<meta name="theme-color" content="#0F172A">
+<meta property="og:title" content="KUPOL — Security dome over your repo">
+<meta property="og:description" content="Local code security. Clear findings. A stronger release boundary.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kupol.app/">
+<link rel="canonical" href="https://kupol.app/">
+<link rel="icon" type="image/svg+xml" href="brand/kupol-favicon.svg">
+<link rel="stylesheet" href="styles.css">
+<script src="script.js" defer></script>
 </head>
-<body data-lang="en">
-  <div class="wrap">
-    <header>
-      <div class="brand">KUPOL</div>
-      <nav>
-        <a href="#how"><span class="en">How it works</span><span class="ru">Как это работает</span></a>
-        <a href="#pricing"><span class="en">Pricing</span><span class="ru">Цены</span></a>
-        <a href="https://github.com/nuculo/kupol">GitHub</a>
-        <div class="lang">
-          <button type="button" data-set-lang="en" aria-pressed="true">EN</button>
-          <button type="button" data-set-lang="ru" aria-pressed="false">RU</button>
-        </div>
-      </nav>
-    </header>
-
-    <section class="hero">
-      <div>
-        <h1>
-          <span class="en">Security dome over your repo.</span>
-          <span class="ru">Купол безопасности над репозиторием.</span>
-        </h1>
-        <p class="lede en">KUPOL scans a local codebase and prints findings. Run it on your machine or in CI. Not affiliated with GitLab.</p>
-        <p class="lede ru">KUPOL сканирует локальный код и печатает находки. У себя на машине или в CI. Не связан с GitLab.</p>
-        <div class="cta">
-          <a class="btn btn-primary" href="https://github.com/nuculo/kupol/releases">
-            <span class="en">Get the engine</span><span class="ru">Скачать движок</span>
-          </a>
-          <a class="btn btn-ghost" href="https://github.com/nuculo/kupol">
-            <span class="en">Source</span><span class="ru">Исходники</span>
-          </a>
-        </div>
-      </div>
-      <div class="dome" aria-hidden="true"></div>
-    </section>
-
-    <h2 id="how"><span class="en">How it works</span><span class="ru">Как это работает</span></h2>
-    <div class="steps">
-      <article class="card">
-        <div class="n">01</div>
-        <h3><span class="en">Point it at a tree</span><span class="ru">Укажите каталог</span></h3>
-        <p class="en"><code>kupol scan .</code> walks the repo (honoring <code>.kupol.yml</code> ignore rules) and runs the scanner plugins.</p>
-        <p class="ru"><code>kupol scan .</code> обходит репозиторий (с ignore из <code>.kupol.yml</code>) и запускает плагины сканера.</p>
-      </article>
-      <article class="card">
-        <div class="n">02</div>
-        <h3><span class="en">Read the report</span><span class="ru">Читайте отчёт</span></h3>
-        <p class="en">Table, JSON, or Markdown. Severity and file/line for each finding.</p>
-        <p class="ru">Таблица, JSON или Markdown. Severity и файл/строка для каждой находки.</p>
-      </article>
-      <article class="card">
-        <div class="n">03</div>
-        <h3><span class="en">Fail the build</span><span class="ru">Ломайте сборку</span></h3>
-        <p class="en">In CI, fail on <code>high</code> (see <code>.kupol.yml</code> and <code>.github/workflows/scan.yml</code>). GitHub or GitLab — either host is fine.</p>
-        <p class="ru">В CI падайте на <code>high</code> (см. <code>.kupol.yml</code> и <code>.github/workflows/scan.yml</code>). GitHub или GitLab — без разницы.</p>
-      </article>
-    </div>
-
-    <h2 id="install"><span class="en">Install</span><span class="ru">Установка</span></h2>
-    <pre class="install"># from the repo, after cargo build --release or unpacking a Release
-chmod +x install.sh bin/kupol
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="header wrap">
+<a class="brand" href="#" aria-label="KUPOL home"><img src="brand/kupol-logo-dark.svg" width="150" height="40" alt="KUPOL"></a>
+<nav aria-label="Main navigation"><a href="#workflow">How it works</a><a href="#preview">Scan preview</a><a href="#pricing">Pricing</a></nav>
+<a class="header-github" href="https://github.com/nuculo/kupol">GitHub <span aria-hidden="true">↗</span></a>
+</header>
+<main id="main">
+<section class="hero wrap">
+<div class="hero-copy"><p class="eyebrow"><span class="status-dot"></span> LOCAL-FIRST APPLICATION SECURITY</p>
+<h1>Your code.<br>Your perimeter.<br><span>Your control.</span></h1>
+<p class="hero-tagline">Security dome over your repo.</p>
+<p class="hero-description">Find vulnerabilities before they ship. KUPOL brings multi-agent security analysis to your codebase, on your machine and in your CI pipeline.</p>
+<div class="actions"><a class="button primary" href="#install">Start scanning <span aria-hidden="true">↗</span></a><a class="button secondary" href="https://github.com/nuculo/kupol">Explore the source <span aria-hidden="true">↗</span></a></div>
+<p class="hero-note">Open source · MIT licensed · Built for developers</p></div>
+<div class="hero-art" aria-hidden="true"><div class="art-top"><span>REPOSITORY PERIMETER</span><span>01 / KUPOL</span></div><div class="orbital orbital-one"></div><div class="orbital orbital-two"></div><div class="dome-drawing"><svg viewBox="0 0 400 310"><path class="dome-fill" d="M40 230V190a160 160 0 0 1 320 0v40Z"/><path class="dome-line" d="M40 230V190a160 160 0 0 1 320 0v40M92 230V190C92 102 140 30 200 30s108 72 108 160v40M200 30v200M40 190h320M60 110h280"/><path class="code-mark" d="m164 139-43 43 43 43m72-86 43 43-43 43"/><path class="baseline" d="M15 245h370"/></svg></div><div class="art-label label-one">SOURCE CODE</div><div class="art-label label-two"><i></i> UNDER THE DOME</div><div class="art-bottom"><span>ANALYZE / TRACE / REPORT</span><span>⌘ LOCAL + CI</span></div></div>
+</section>
+<div class="signal-strip"><div class="wrap signal-inner"><span>SECURITY, BEFORE THE MERGE.</span><span>Source analysis</span><span>Dependency context</span><span>Severity-based gates</span><span>Actionable reports</span></div></div>
+<section id="workflow" class="section wrap"><div class="section-head"><div><p class="eyebrow">01 / THE WORKFLOW</p><h2>A small command.<br>A stronger boundary.</h2></div><p>Stay in your development flow.<br>Bring security to the code you already write.</p></div><div class="steps"><article><span class="step-number">01</span><h3>Point it at your repo.</h3><p>Run KUPOL locally against your source tree. Configure severity and exclusions in <code>.kupol.yml</code>.</p><code class="inline-command">kupol scan .</code></article><article><span class="step-number">02</span><h3>Look beyond the line.</h3><p>Combine security checks with graph-based context, architecture analysis, and the blast radius of a change.</p><span class="step-detail">CODE → CONTEXT → FINDINGS</span></article><article><span class="step-number">03</span><h3>Set your release boundary.</h3><p>Review a table, JSON, or Markdown report. Fail CI when findings meet your chosen severity threshold.</p><code class="inline-command">--fail-on high</code></article></div></section>
+<section id="preview" class="preview-section section"><div class="wrap"><div class="section-head"><div><p class="eyebrow">02 / SIGNAL YOU CAN ACT ON</p><h2>Find it. Understand it.<br>Fix it before release.</h2></div><p>From a suspicious pattern to a concrete next step.<br>No mystery score required.</p></div>
+<div class="terminal"><div class="terminal-bar"><div class="terminal-dots"><i></i><i></i><i></i></div><span>kupol / scan preview</span><span class="demo-label">ILLUSTRATIVE OUTPUT</span></div><div class="terminal-body"><p class="terminal-command"><span>$</span> kupol scan . --fail-on high</p><p class="terminal-muted">Scanning repository · security checks · source analysis</p><div class="scan-table" role="table" aria-label="Illustrative scan findings"><div class="scan-row scan-head" role="row"><span role="columnheader">SEVERITY</span><span role="columnheader">FINDING</span><span role="columnheader">LOCATION</span></div><div class="scan-row" role="row"><span role="cell"><b class="severity">HIGH</b></span><span role="cell">SQL string interpolation<small>CWE-89 · SQL injection</small></span><code role="cell">src/db.rs:42</code></div><div class="scan-row" role="row"><span role="cell"><b class="severity">HIGH</b></span><span role="cell">Hardcoded secret<small>CWE-798 · Embedded credentials</small></span><code role="cell">src/config.rs:18</code></div><div class="scan-row" role="row"><span role="cell"><b class="severity medium">MEDIUM</b></span><span role="cell">Weak cryptographic algorithm<small>CWE-327 · Cryptography</small></span><code role="cell">src/hash.rs:27</code></div></div><div class="terminal-result"><span><span class="result-cross">×</span> Severity threshold reached</span><span>EXIT CODE 1</span></div></div></div><p class="preview-caption">Example findings shown for illustration. Actual output depends on your codebase and configuration.</p></div></section>
+<section class="section wrap" id="benefits"><div class="section-head"><div><p class="eyebrow">03 / BUILT FOR YOUR WORKFLOW</p><h2>More context.<br>Less distance from your code.</h2></div></div><div class="benefits"><article><span class="feature-icon" aria-hidden="true">⌁</span><div><h3>Your machine. Your source.</h3><p>Run the scanner locally or inside your own CI environment. Start with your repository, without a hosted scanning workflow.</p><span class="step-detail">LOCAL-FIRST</span></div></article><article><span class="feature-icon" aria-hidden="true">⊣</span><div><h3>A gate with a clear rule.</h3><p>Choose the severity that stops a build. Use the same command locally and in CI, with reports your pipeline can consume.</p><span class="step-detail">CI GATING</span></div></article><article><span class="feature-icon" aria-hidden="true">⋈</span><div><h3>Different lenses. One codebase.</h3><p>Multi-agent analysis brings security, dependency context, and architecture drift into the same investigation.</p><span class="step-detail">MULTI-AGENT ANALYSIS</span></div></article><article><span class="feature-icon" aria-hidden="true">&lt;/&gt;</span><div><h3>Trust you can inspect.</h3><p>Read the checks. Explore the engine. Contribute a fix. KUPOL is open source under the MIT license.</p><a class="text-link" href="https://github.com/nuculo/kupol">Read the source ↗</a></div></article></div></section>
+<section id="install" class="section install-section"><div class="wrap install-grid"><div><p class="eyebrow">04 / FROM SOURCE TO FIRST SCAN</p><h2>Put up your dome.</h2><p>Build from source with Rust and Cargo, then install the CLI using the included shell script.</p><a class="text-link" href="https://github.com/nuculo/kupol#install">Installation docs & release binaries ↗</a><p class="install-note">Shell commands below are for Linux / macOS.<br>Ensure <code>~/.local/bin</code> is on your PATH.</p></div><div class="install-code"><div class="code-toolbar"><span>SH / BUILD FROM SOURCE</span><button type="button" data-copy aria-label="Copy installation commands">Copy <span aria-hidden="true">⧉</span></button></div><pre><code id="install-commands">git clone https://github.com/nuculo/kupol.git
+cd kupol
+cargo build --release
 ./install.sh ./target/release/duo-agents
-kupol scan . -f table</pre>
 
-    <h2 id="pricing"><span class="en">Pricing</span><span class="ru">Цены</span></h2>
-    <div class="pricing">
-      <article class="card">
-        <div class="n">Free</div>
-        <div class="price">$0</div>
-        <p class="en">CLI, local scan, MIT source, GitHub Releases engine.</p>
-        <p class="ru">CLI, локальный скан, исходники MIT, движок из GitHub Releases.</p>
-      </article>
-      <article class="card">
-        <div class="n">Team</div>
-        <div class="price">$49 <span class="en">/ month</span><span class="ru"> / мес</span></div>
-        <p class="en">Shared report workflow for a small team. Same scanner.</p>
-        <p class="ru">Общий процесс отчётов для небольшой команды. Тот же сканер.</p>
-      </article>
-      <article class="card">
-        <div class="n">Company</div>
-        <div class="price"><span class="en">from</span><span class="ru">от</span> $199 <span class="en">/ month</span><span class="ru"> / мес</span></div>
-        <p class="en">Org-wide CI templates and support. Same scanner.</p>
-        <p class="ru">CI-шаблоны на организацию и поддержка. Тот же сканер.</p>
-      </article>
-    </div>
-
-    <footer>
-      <span>KUPOL · MIT · not affiliated with GitLab</span>
-      <span><a href="https://kupol.app">kupol.app</a> · <a href="https://github.com/nuculo/kupol">github.com/nuculo/kupol</a></span>
-    </footer>
-  </div>
-  <script>
-    const root = document.body;
-    const buttons = document.querySelectorAll("[data-set-lang]");
-    function setLang(lang) {
-      root.setAttribute("data-lang", lang);
-      buttons.forEach((b) => b.setAttribute("aria-pressed", b.getAttribute("data-set-lang") === lang ? "true" : "false"));
-    }
-    buttons.forEach((b) => b.addEventListener("click", () => setLang(b.getAttribute("data-set-lang"))));
-  </script>
+kupol scan .</code></pre><p class="copy-status" role="status" aria-live="polite"></p></div></div></section>
+<section id="pricing" class="section wrap"><div class="section-head"><div><p class="eyebrow">05 / START OPEN. GROW WITH INTENT.</p><h2>Security starts free.</h2></div><p>The scanner is available today.<br>Commercial offerings are being shaped.</p></div><div class="pricing-grid"><article class="price-card available"><div class="price-top"><h3>Free</h3><span class="plan-status">AVAILABLE</span></div><p class="price">$0<span> / forever</span></p><p>For developers who want security in their own workflow.</p><ul><li>Open-source scanner</li><li>Local and CI scanning</li><li>Table, JSON & Markdown reports</li><li>MIT license</li></ul><a class="button primary" href="#install">Get KUPOL <span aria-hidden="true">↗</span></a></article><article class="price-card"><div class="price-top"><h3>Team</h3><span class="plan-status muted-status">PLANNED</span></div><p class="price price-text">Build together.</p><p>A future offering for teams coordinating application security.</p><ul><li>Scope and pricing to be announced</li><li>Share your team’s workflow needs</li></ul><a class="button secondary" href="https://github.com/nuculo/kupol/issues/new">Discuss your needs <span aria-hidden="true">↗</span></a></article><article class="price-card"><div class="price-top"><h3>Company</h3><span class="plan-status muted-status">PLANNED</span></div><p class="price price-text">Scale with clarity.</p><p>A future offering for organization-wide security requirements.</p><ul><li>Scope and pricing to be announced</li><li>Help shape the company offering</li></ul><a class="button secondary" href="https://github.com/nuculo/kupol/issues/new">Start a conversation <span aria-hidden="true">↗</span></a></article></div></section>
+<section class="closing wrap"><p class="eyebrow">YOUR NEXT RELEASE STARTS HERE.</p><h2>Keep the risk<br><span>out of the release.</span></h2><a class="button primary" href="#install">Scan your repository <span aria-hidden="true">↗</span></a></section>
+</main>
+<footer class="wrap"><div class="footer-top"><a class="brand" href="#" aria-label="KUPOL home"><img src="brand/kupol-logo-dark.svg" width="150" height="40" alt="KUPOL"></a><p>Security dome over your repo.</p><div><a href="https://github.com/nuculo/kupol">GitHub ↗</a><a href="https://github.com/nuculo/kupol/blob/main/README.md">Documentation ↗</a><a href="https://github.com/nuculo/kupol/blob/main/LICENSE">MIT license ↗</a></div></div><div class="footer-bottom"><span>KUPOL · Open-source application security</span><span>Independent project. Not affiliated with GitLab.</span></div></footer>
 </body>
 </html>

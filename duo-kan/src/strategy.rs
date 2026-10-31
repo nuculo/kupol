@@ -94,7 +94,7 @@ impl ScanEngine for LlmReviewEngine {
     
     fn scan(&self, source: &str) -> Vec<String> {
         let mut findings = Vec::new();
-        // Simulated LLM analysis (would call GitLab Duo API in production)
+        // Simulated LLM analysis (would call an external LLM API in production)
         if source.len() > 200 {
             findings.push("Complexity: Function exceeds 200 chars, consider splitting".into());
         }

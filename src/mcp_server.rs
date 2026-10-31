@@ -86,8 +86,8 @@ async fn handle_request(req: JsonRpcRequest) {
                         "tools": {}
                     },
                     "serverInfo": {
-                        "name": "duo-agents",
-                        "version": "0.1.0"
+                        "name": "kupol",
+                        "version": env!("CARGO_PKG_VERSION")
                     }
                 })),
                 None,
@@ -103,7 +103,7 @@ async fn handle_request(req: JsonRpcRequest) {
                     "tools": [
                         {
                             "name": "scan_codebase",
-                            "description": "Scans the specified local codebase path for security vulnerabilities using the Duo Architecture Guardian engine.",
+                            "description": "Scans a local codebase path for security findings using the KUPOL engine.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {

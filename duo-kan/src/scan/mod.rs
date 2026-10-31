@@ -167,13 +167,19 @@ impl ScanSummary {
 // § Scan Pipeline
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Запуск полного сканирования
+/// Запуск полного сканирования (читает `.kupol.yml` для ignore-правил)
 pub fn run_scan(path: &str) -> ScanResult {
+    let ignore = load_ignore_globs(path);
+    run_scan_with_ignore(path, &ignore)
+}
+
+/// Запуск сканирования с явным списком ignore-паттернов.
+pub fn run_scan_with_ignore(path: &str, ignore: &[String]) -> ScanResult {
     let start = std::time::Instant::now();
     let scan_id = format!("scan-{}", uuid::Uuid::new_v4().to_string().split('-').next().unwrap());
 
     // Сбор файлов
-    let files = collect_files(path);
+    let files = collect_files(path, ignore);
     let total_files = files.len();
 
     // Запуск всех плагинов
@@ -271,8 +277,11 @@ pub fn run_scan(path: &str) -> ScanResult {
     }
 }
 
-/// Сбор файлов для сканирования
-fn collect_files(path: &str) -> Vec<String> {
+/// Сбор файлов для сканирования.
+///
+/// Всегда пропускаются `target/`, `node_modules/`, `.git/`. Дополнительно
+/// применяются пользовательские ignore-правила из `.kupol.yml`.
+fn collect_files(path: &str, ignore: &[String]) -> Vec<String> {
     let mut files = Vec::new();
     let extensions = ["rs", "ts", "tsx", "js", "py", "go", "rb", "java", "yaml", "yml", "toml"];
 
@@ -284,8 +293,7 @@ fn collect_files(path: &str) -> Vec<String> {
             if let Ok(entries) = glob::glob(&pattern) {
                 for entry in entries.flatten() {
                     let p = entry.to_string_lossy().to_string();
-                    // skip target/, node_modules/, .git/
-                    if !p.contains("/target/") && !p.contains("/node_modules/") && !p.contains("/.git/") {
+                    if !is_path_ignored(&p, ignore) {
                         files.push(p);
                     }
                 }
@@ -293,4 +301,59 @@ fn collect_files(path: &str) -> Vec<String> {
         }
     }
     files
+}
+
+/// Встроенные + пользовательские ignore-правила.
+fn is_path_ignored(file_path: &str, ignore: &[String]) -> bool {
+    let normalized = file_path.replace('\\', "/");
+
+    // Built-in skips — всегда активны.
+    for builtin in ["target", "node_modules", ".git"] {
+        if normalized.contains(&format!("/{}/", builtin))
+            || normalized.starts_with(&format!("{}/", builtin))
+        {
+            return true;
+        }
+    }
+
+    // Пользовательские правила из `.kupol.yml`.
+    ignore.iter().any(|raw| {
+        let pat = raw.trim().trim_matches('/');
+        if pat.is_empty() {
+            return false;
+        }
+        normalized == pat
+            || normalized.starts_with(&format!("{}/", pat))
+            || normalized.contains(&format!("/{}/", pat))
+            || normalized.ends_with(&format!("/{}", pat))
+    })
+}
+
+/// Читает список ignore-паттернов из `.kupol.yml` (рядом с целью скана или в CWD).
+fn load_ignore_globs(target_path: &str) -> Vec<String> {
+    let target = std::path::Path::new(target_path);
+    let mut candidates = Vec::new();
+    if target.is_dir() {
+        candidates.push(target.join(".kupol.yml"));
+    } else if let Some(parent) = target.parent() {
+        if !parent.as_os_str().is_empty() {
+            candidates.push(parent.join(".kupol.yml"));
+        }
+    }
+    candidates.push(std::path::PathBuf::from(".kupol.yml"));
+
+    for candidate in candidates {
+        if let Ok(text) = std::fs::read_to_string(&candidate) {
+            if let Ok(value) = serde_yaml::from_str::<serde_yaml::Value>(&text) {
+                if let Some(list) = value.get("ignore").and_then(|v| v.as_sequence()) {
+                    return list
+                        .iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect();
+                }
+            }
+            return Vec::new();
+        }
+    }
+    Vec::new()
 }

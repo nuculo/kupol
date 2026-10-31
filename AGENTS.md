@@ -13,32 +13,44 @@ You are working on **KUPOL**, a local security scanner for a git repo. Public si
 
 Rust workspace (do not rename the engine crate):
 
-- `duo-agents` — binary: actors, HTTP server, WebSocket, dashboard static files
-- `duo-kan` — library in this same public repo: scan pipeline, policy engine, semantic analysis
+- `duo-agents` — binary: CLI, actors, HTTP server, WebSocket, dashboard static files. Internal engine name; users only ever type `kupol`.
+- `duo-kan` — library in this same public repo: scan pipeline, security checks (plugins), grading, report formatting.
 
 Key paths:
 
+- `src/main.rs` — CLI dispatch (scan, serve, report, init, mcp, info, demo)
+- `src/cli.rs` — clap definitions
+- `src/config.rs` — `.kupol.yml` loader (ignore, min_severity, fail_on)
 - `src/actors/` — ast_analyzer, security, drift_detector, gitlab (optional git host client), mcp_bridge, swarm, node_broker
 - `src/orchestrator.rs` — DAG-style multi-actor flow
 - `src/server/` — Axum REST + WebSocket
-- `duo-kan/src/scan/` — scan plugins
+- `src/demos/` — multi-agent demo scenarios (`kupol demo`)
+- `duo-kan/src/scan/` — scan pipeline, plugins, report, grading
 - `dashboard/` — React monitoring UI
-- `bin/kupol` — public wrapper around the engine binary
+- `bin/kupol`, `bin/kupol.ps1` — public wrapper around the engine binary
 
-## How to analyze code
+## How a scan works
 
-1. Parse with `syn` and build an `EntityGraph`
-2. Run plugins from `scan::plugins::all_plugins()`
-3. Compare module deps against declared layers
-4. For a finding, compute blast-radius on the graph
-5. Report as table, JSON, or Markdown
+1. `scan::run_scan(path)` reads `.kupol.yml` (ignore rules) and collects files
+2. Each plugin from `scan::plugins::all_plugins()` inspects a file and emits findings
+3. Findings are graded (severity + risk score) and filtered by `min_severity`
+4. The report is printed as table, JSON, or Markdown
+5. `--fail-on` (or `fail_on` in `.kupol.yml`) sets the CI exit code
 
 ## Conventions
 
-- Russian comments in engine modules are existing style; do not mass-rewrite them
+- User-facing text (CLI output, finding titles/descriptions, logs, docs, website) is English and says KUPOL only.
+- Russian comments in engine modules are existing style; do not mass-rewrite them. Do not reintroduce Russian into user-facing strings.
+- Logs go to stderr via `tracing`; stdout stays clean for reports and JSON-RPC.
 - Actors use a 2-phase Execute/Complete model
 - Errors: `anyhow::Result<()>`
 - Async: Tokio; HTTP: Axum
+
+## Forbidden in product-facing files
+
+Never use these strings in README, website, docs, AGENTS.md, or CLI output:
+"GitLab Duo", "Duo Agent Platform", "Duo Architecture Guardian", "Duo Chat".
+GitLab is OK only as an optional git/CI host, same as GitHub.
 
 ## Review checklist
 

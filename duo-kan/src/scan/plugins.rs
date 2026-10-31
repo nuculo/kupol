@@ -32,7 +32,7 @@ pub struct UnsafeCodePlugin;
 
 impl SecurityPlugin for UnsafeCodePlugin {
     fn name(&self) -> &str { "unsafe-code" }
-    fn description(&self) -> &str { "Обнаружение unsafe блоков и raw pointers" }
+    fn description(&self) -> &str { "Detects unsafe blocks and raw pointers" }
 
     fn scan(&self, file_path: &str, content: &str) -> Vec<Finding> {
         if !file_path.ends_with(".rs") { return vec![]; }
@@ -46,12 +46,12 @@ impl SecurityPlugin for UnsafeCodePlugin {
                 findings.push(Finding {
                     plugin: self.name().into(),
                     severity: Severity::High,
-                    title: "Использование unsafe блока".into(),
-                    description: "unsafe код обходит проверки borrow checker и может вызвать UB".into(),
+                    title: "Unsafe block".into(),
+                    description: "unsafe code bypasses the borrow checker and can cause undefined behavior.".into(),
                     file: file_path.into(),
                     line: Some(i + 1),
                     code_snippet: Some(trimmed.to_string()),
-                    suggestion: Some("Рассмотрите safe-альтернативы или добавьте // SAFETY: комментарий".into()),
+                    suggestion: Some("Prefer a safe alternative, or add a `// SAFETY:` comment explaining the invariants.".into()),
                     cwe: Some("CWE-676".into()),
                 });
             }
@@ -60,12 +60,12 @@ impl SecurityPlugin for UnsafeCodePlugin {
                 findings.push(Finding {
                     plugin: self.name().into(),
                     severity: Severity::Medium,
-                    title: "Raw pointer detected".into(),
-                    description: "Raw pointers могут вызвать use-after-free и double-free".into(),
+                    title: "Raw pointer".into(),
+                    description: "Raw pointers can lead to use-after-free and double-free bugs.".into(),
                     file: file_path.into(),
                     line: Some(i + 1),
                     code_snippet: Some(trimmed.to_string()),
-                    suggestion: Some("Используйте &T/&mut T или Box<T> вместо raw pointers".into()),
+                    suggestion: Some("Use `&T`/`&mut T` or `Box<T>` instead of raw pointers.".into()),
                     cwe: Some("CWE-416".into()),
                 });
             }
@@ -81,17 +81,17 @@ pub struct SqlInjectionPlugin;
 
 impl SecurityPlugin for SqlInjectionPlugin {
     fn name(&self) -> &str { "sql-injection" }
-    fn description(&self) -> &str { "Обнаружение SQL-инъекций (Powered by PhiProtocol)" }
+    fn description(&self) -> &str { "Detects SQL built from string interpolation" }
 
     fn scan(&self, file_path: &str, content: &str) -> Vec<Finding> {
         use crate::scan::phi::{PhiRule, select_phi_engine};
 
         let rules = [
-            PhiRule { pattern: "format!(\"SELECT", severity: Severity::Critical, description: "SQL query built via format!()", suggestion: "Используйте параметризованные запросы", cwe: "CWE-89" },
-            PhiRule { pattern: "format!(\"INSERT", severity: Severity::Critical, description: "SQL insert built via format!()", suggestion: "Используйте параметризованные запросы", cwe: "CWE-89" },
-            PhiRule { pattern: "format!(\"UPDATE", severity: Severity::Critical, description: "SQL update built via format!()", suggestion: "Используйте параметризованные запросы", cwe: "CWE-89" },
-            PhiRule { pattern: ".execute(&format!", severity: Severity::Critical, description: "Dynamic SQL execution", suggestion: "Используйте параметризованные запросы", cwe: "CWE-89" },
-            PhiRule { pattern: "raw_query(", severity: Severity::High, description: "Potential raw SQL query", suggestion: "Используйте ORM type-safe queries", cwe: "CWE-89" },
+            PhiRule { pattern: "format!(\"SELECT", severity: Severity::Critical, description: "SQL query built with format!()", suggestion: "Use parameterized queries instead of string interpolation.", cwe: "CWE-89" },
+            PhiRule { pattern: "format!(\"INSERT", severity: Severity::Critical, description: "SQL insert built with format!()", suggestion: "Use parameterized queries instead of string interpolation.", cwe: "CWE-89" },
+            PhiRule { pattern: "format!(\"UPDATE", severity: Severity::Critical, description: "SQL update built with format!()", suggestion: "Use parameterized queries instead of string interpolation.", cwe: "CWE-89" },
+            PhiRule { pattern: ".execute(&format!", severity: Severity::Critical, description: "Dynamic SQL execution", suggestion: "Use parameterized queries instead of string interpolation.", cwe: "CWE-89" },
+            PhiRule { pattern: "raw_query(", severity: Severity::High, description: "Potential raw SQL query", suggestion: "Use a type-safe query builder or parameterized queries.", cwe: "CWE-89" },
         ];
 
         // 🧠 Graceful Degradation: Оркестратор выдает AST-SemanticPhi для маленьких файлов, 
@@ -109,7 +109,7 @@ pub struct HardcodedSecretsPlugin;
 
 impl SecurityPlugin for HardcodedSecretsPlugin {
     fn name(&self) -> &str { "hardcoded-secrets" }
-    fn description(&self) -> &str { "Обнаружение захардкоженных секретов и ключей API" }
+    fn description(&self) -> &str { "Detects hardcoded secrets and API keys" }
 
     fn scan(&self, file_path: &str, content: &str) -> Vec<Finding> {
         // Skip binary files and lock files
@@ -150,12 +150,12 @@ impl SecurityPlugin for HardcodedSecretsPlugin {
                     findings.push(Finding {
                         plugin: self.name().into(),
                         severity,
-                        title: format!("Обнаружен секрет: {}", desc),
-                        description: "Секреты не должны храниться в коде".into(),
+                        title: format!("Hardcoded secret: {}", desc),
+                        description: "Secrets should not be committed to source code.".into(),
                         file: file_path.into(),
                         line: Some(i + 1),
                         code_snippet: Some(format!("{}...", &trimmed[..trimmed.len().min(60)])),
-                        suggestion: Some("Перенесите секреты в переменные окружения или Vault".into()),
+                        suggestion: Some("Move secrets to environment variables or a secrets manager.".into()),
                         cwe: Some("CWE-798".into()),
                     });
                     break; // one finding per line
@@ -173,7 +173,7 @@ pub struct UnwrapPlugin;
 
 impl SecurityPlugin for UnwrapPlugin {
     fn name(&self) -> &str { "unwrap-panic" }
-    fn description(&self) -> &str { "Обнаружение .unwrap() без обработки ошибок" }
+    fn description(&self) -> &str { "Detects .unwrap() without error handling" }
 
     fn scan(&self, file_path: &str, content: &str) -> Vec<Finding> {
         if !file_path.ends_with(".rs") { return vec![]; }
@@ -189,12 +189,12 @@ impl SecurityPlugin for UnwrapPlugin {
                 findings.push(Finding {
                     plugin: self.name().into(),
                     severity: Severity::Low,
-                    title: "Использование .unwrap() без обработки ошибок".into(),
-                    description: "unwrap() вызывает panic при None/Err — опасно в production".into(),
+                    title: ".unwrap() without error handling".into(),
+                    description: "unwrap() panics on None/Err, which is risky in production code.".into(),
                     file: file_path.into(),
                     line: Some(i + 1),
                     code_snippet: Some(trimmed.to_string()),
-                    suggestion: Some("Используйте match, if let, ?, или .unwrap_or_default()".into()),
+                    suggestion: Some("Use match, if let, the `?` operator, or .unwrap_or_default().".into()),
                     cwe: Some("CWE-391".into()),
                 });
             }
@@ -210,16 +210,16 @@ pub struct TodoFixmePlugin;
 
 impl SecurityPlugin for TodoFixmePlugin {
     fn name(&self) -> &str { "todo-fixme" }
-    fn description(&self) -> &str { "Обнаружение незакрытых TODO, FIXME, HACK, XXX" }
+    fn description(&self) -> &str { "Detects unresolved TODO, FIXME, HACK, XXX markers" }
 
     fn scan(&self, file_path: &str, content: &str) -> Vec<Finding> {
         let mut findings = Vec::new();
         let markers = [
-            ("FIXME", Severity::Medium, "Требует исправления"),
-            ("HACK", Severity::Medium, "Временное решение"),
-            ("XXX", Severity::Medium, "Опасный участок"),
-            ("TODO: security", Severity::High, "Отложенная задача безопасности"),
-            ("TODO", Severity::Info, "Незакрытая задача"),
+            ("FIXME", Severity::Medium, "Needs a fix"),
+            ("HACK", Severity::Medium, "Temporary workaround"),
+            ("XXX", Severity::Medium, "Fragile or risky code"),
+            ("TODO: security", Severity::High, "Deferred security task"),
+            ("TODO", Severity::Info, "Unresolved task"),
         ];
 
         for (i, line) in content.lines().enumerate() {
@@ -229,7 +229,7 @@ impl SecurityPlugin for TodoFixmePlugin {
                     findings.push(Finding {
                         plugin: self.name().into(),
                         severity: severity.clone(),
-                        title: format!("{} маркер", marker),
+                        title: format!("{} marker", marker),
                         description: desc.to_string(),
                         file: file_path.into(),
                         line: Some(i + 1),
@@ -252,19 +252,19 @@ pub struct DeprecatedApiPlugin;
 
 impl SecurityPlugin for DeprecatedApiPlugin {
     fn name(&self) -> &str { "deprecated-api" }
-    fn description(&self) -> &str { "Обнаружение устаревших и опасных API" }
+    fn description(&self) -> &str { "Detects deprecated and dangerous APIs" }
 
     fn scan(&self, file_path: &str, content: &str) -> Vec<Finding> {
         let mut findings = Vec::new();
         let deprecated = [
-            ("std::mem::transmute", Severity::High, "transmute обходит систему типов"),
-            ("std::mem::uninitialized", Severity::Critical, "Создание неинициализированной памяти — UB"),
-            ("eval(", Severity::Critical, "Динамическое выполнение кода"),
-            ("exec(", Severity::High, "Выполнение системных команд"),
-            ("os.system(", Severity::High, "Python: системная команда"),
-            ("subprocess.call(", Severity::Medium, "Python: subprocess без проверки"),
-            ("dangerouslySetInnerHTML", Severity::High, "React: XSS уязвимость"),
-            ("innerHTML", Severity::Medium, "Прямой DOM-инъекция"),
+            ("std::mem::transmute", Severity::High, "transmute bypasses the type system"),
+            ("std::mem::uninitialized", Severity::Critical, "Creates uninitialized memory (undefined behavior)"),
+            ("eval(", Severity::Critical, "Dynamic code execution"),
+            ("exec(", Severity::High, "Executes system commands"),
+            ("os.system(", Severity::High, "Python: runs a shell command"),
+            ("subprocess.call(", Severity::Medium, "Python: subprocess without validation"),
+            ("dangerouslySetInnerHTML", Severity::High, "React: potential XSS"),
+            ("innerHTML", Severity::Medium, "Direct DOM injection"),
         ];
 
         for (i, line) in content.lines().enumerate() {
@@ -276,12 +276,12 @@ impl SecurityPlugin for DeprecatedApiPlugin {
                     findings.push(Finding {
                         plugin: self.name().into(),
                         severity: severity.clone(),
-                        title: format!("Опасный API: {}", pattern),
+                        title: format!("Dangerous API: {}", pattern),
                         description: desc.to_string(),
                         file: file_path.into(),
                         line: Some(i + 1),
                         code_snippet: Some(trimmed.to_string()),
-                        suggestion: Some("Используйте безопасные альтернативы".into()),
+                        suggestion: Some("Replace with a safe alternative.".into()),
                         cwe: Some("CWE-477".into()),
                     });
                 }
@@ -298,15 +298,15 @@ pub struct InputValidationPlugin;
 
 impl SecurityPlugin for InputValidationPlugin {
     fn name(&self) -> &str { "input-validation" }
-    fn description(&self) -> &str { "Обнаружение отсутствия валидации входных данных" }
+    fn description(&self) -> &str { "Detects missing input validation" }
 
     fn scan(&self, file_path: &str, content: &str) -> Vec<Finding> {
         let mut findings = Vec::new();
         let patterns = [
-            ("from_utf8_unchecked", Severity::High, "UTF-8 без проверки может вызвать UB"),
-            ("parse().unwrap()", Severity::Medium, "Парсинг без обработки ошибок"),
-            ("as_str().unwrap()", Severity::Low, "Преобразование без проверки типа"),
-            ("from_raw_parts", Severity::Critical, "Создание данных из raw pointer"),
+            ("from_utf8_unchecked", Severity::High, "Unchecked UTF-8 can cause undefined behavior"),
+            ("parse().unwrap()", Severity::Medium, "Parsing without error handling"),
+            ("as_str().unwrap()", Severity::Low, "Conversion without a type check"),
+            ("from_raw_parts", Severity::Critical, "Builds a slice from a raw pointer"),
         ];
 
         for (i, line) in content.lines().enumerate() {
@@ -318,12 +318,12 @@ impl SecurityPlugin for InputValidationPlugin {
                     findings.push(Finding {
                         plugin: self.name().into(),
                         severity: severity.clone(),
-                        title: "Отсутствие валидации входных данных".into(),
+                        title: "Missing input validation".into(),
                         description: desc.to_string(),
                         file: file_path.into(),
                         line: Some(i + 1),
                         code_snippet: Some(trimmed.to_string()),
-                        suggestion: Some("Добавьте валидацию и обработку ошибок".into()),
+                        suggestion: Some("Validate the input and handle errors explicitly.".into()),
                         cwe: Some("CWE-20".into()),
                     });
                 }
@@ -340,23 +340,23 @@ pub struct CryptoWeaknessPlugin;
 
 impl SecurityPlugin for CryptoWeaknessPlugin {
     fn name(&self) -> &str { "crypto-weakness" }
-    fn description(&self) -> &str { "Обнаружение слабой криптографии" }
+    fn description(&self) -> &str { "Detects weak cryptography" }
 
     fn scan(&self, file_path: &str, content: &str) -> Vec<Finding> {
         let mut findings = Vec::new();
         // Patterns that need word-boundary matching to avoid false positives (e.g. "DES" in "description")
         let weak_crypto = [
-            ("MD5(", Severity::High, "MD5 небезопасен для hashing паролей"),
-            ("md5(", Severity::High, "MD5 небезопасен для hashing паролей"),
-            ("SHA1(", Severity::Medium, "SHA1 считается устаревшим"),
-            ("sha1(", Severity::Medium, "SHA1 считается устаревшим"),
-            ("DES.encrypt", Severity::High, "DES-шифрование взломано"),
-            ("DES.decrypt", Severity::High, "DES-шифрование взломано"),
-            ("DESCipher", Severity::High, "DES-шифрование взломано"),
-            ("RC4.encrypt", Severity::High, "RC4 считается небезопасным"),
-            ("RC4.decrypt", Severity::High, "RC4 считается небезопасным"),
-            ("\"ECB\"", Severity::Medium, "ECB mode не обеспечивает семантическую безопасность"),
-            ("Math.random()", Severity::Medium, "Math.random() предсказуем"),
+            ("MD5(", Severity::High, "MD5 is unsafe for password hashing"),
+            ("md5(", Severity::High, "MD5 is unsafe for password hashing"),
+            ("SHA1(", Severity::Medium, "SHA-1 is considered obsolete"),
+            ("sha1(", Severity::Medium, "SHA-1 is considered obsolete"),
+            ("DES.encrypt", Severity::High, "DES encryption is broken"),
+            ("DES.decrypt", Severity::High, "DES encryption is broken"),
+            ("DESCipher", Severity::High, "DES encryption is broken"),
+            ("RC4.encrypt", Severity::High, "RC4 is considered insecure"),
+            ("RC4.decrypt", Severity::High, "RC4 is considered insecure"),
+            ("\"ECB\"", Severity::Medium, "ECB mode is not semantically secure"),
+            ("Math.random()", Severity::Medium, "Math.random() is predictable"),
         ];
 
         for (i, line) in content.lines().enumerate() {
@@ -370,12 +370,12 @@ impl SecurityPlugin for CryptoWeaknessPlugin {
                     findings.push(Finding {
                         plugin: self.name().into(),
                         severity: severity.clone(),
-                        title: format!("Слабая криптография: {}", pattern),
+                        title: format!("Weak cryptography: {}", pattern),
                         description: desc.to_string(),
                         file: file_path.into(),
                         line: Some(i + 1),
                         code_snippet: Some(trimmed.to_string()),
-                        suggestion: Some("Используйте AES-256-GCM, SHA-256+, bcrypt/argon2".into()),
+                        suggestion: Some("Use AES-256-GCM, SHA-256+, or bcrypt/argon2.".into()),
                         cwe: Some("CWE-327".into()),
                     });
                 }

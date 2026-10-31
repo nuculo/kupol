@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">KUPOL — Code Canopy</title>
+  <path d="M16 80V64a48 48 0 0 1 96 0v16" fill="none" stroke="#22D3EE" stroke-width="12"/>
+  <path d="m48 48 8 10-22 22 22 22-8 10-32-32Zm32 0-8 10 22 22-22 22 8 10 32-32Z" fill="#0F172A"/>
+</svg>

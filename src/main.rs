@@ -1,27 +1,22 @@
-//! # 🚀 Duo Agent Platform — Точка входа
+//! # KUPOL engine — entry point
 //!
-//! Модульная платформа анализа Merge Request на основе YDB-акторов.
+//! KUPOL is a local security scanner for a code repository. This binary is the
+//! KUPOL engine (internal crate name `duo-agents`); the public `kupol` command
+//! wraps it. The engine runs a plugin-based scan pipeline over a source tree and
+//! reports findings, and also hosts the optional Web UI, MCP server, and the
+//! multi-agent demo scenarios.
 //!
-//! ## Архитектура модулей
+//! ## Module layout
 //!
 //! ```text
 //! src/
-//! ├── main.rs           — Точка входа + демо-сценарии
-//! ├── models.rs         — Модели сущностей (Entity, EntityGraph, AstPatch)
-//! ├── protocol.rs       — YDB-протоколы (Message, GraphDelta, DynBitMap, NodeInfo)
-//! ├── actor.rs          — Actor trait (2-фазная модель Execute/Complete)
-//! ├── actors/           — Доменные акторы
-//! │   ├── ast_analyzer  — Построение EntityGraph
-//! │   ├── drift_detector— KQP-оптимизатор + KMeans Vector ANN
-//! │   ├── security      — DFS taint-анализ + Ring All-Reduce
-//! │   ├── gitlab        — GitLab API клиент + авто-хилинг MR
-//! │   ├── mcp_bridge    — JSON-RPC 2.0 → MCP Server
-//! │   ├── swarm         — AstFixAgent + ReviewAgent + AggregatorActor
-//! │   └── node_broker   — Регистрация узлов (YDB TTxRegisterNode)
-//! ├── orchestrator.rs   — FlowOrchestratorActor + WebSocket
-//! ├── semantic_engine/  — HIR Call Graph через syn
-//! ├── kan_intelligence/ — 12 модулей из Clojure KAN
-//! └── ...               — Вспомогательные модули
+//! ├── main.rs           — entry point + CLI dispatch
+//! ├── actor.rs          — Actor trait (2-phase Execute/Complete model)
+//! ├── actors/           — domain actors (AST, security, drift, git host, MCP, swarm)
+//! ├── orchestrator.rs   — DAG-style multi-actor flow + WebSocket
+//! ├── server/           — Axum REST + WebSocket
+//! ├── mcp_server.rs     — Model Context Protocol server (stdio)
+//! └── demos/            — multi-agent demo scenarios
 //! ```
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,6 +41,8 @@ pub mod mcp_server;
 pub use duo_kan::kan;
 /// CLI интерфейс (clap)
 pub mod cli;
+/// Конфигурация `.kupol.yml`
+pub mod config;
 pub mod server;
 pub mod demos;
 
@@ -97,22 +94,12 @@ pub use actors::drift_detector::cosine_similarity;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use tokio::sync::{mpsc, broadcast};
-use tokio::time::Duration;
-use tokio::net::TcpListener;
+use tokio::sync::broadcast;
 use tracing::{info, warn, error};
 use clap::Parser;
-use axum::{
-    extract::State,
-    routing::{get, post},
-    Json, Router,
-    response::IntoResponse,
-};
-use tower_http::cors::{Any, CorsLayer};
-use tower_http::services::ServeDir;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// § Shared State для API
+// § Shared state for the API server
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[derive(Clone)]
@@ -127,71 +114,100 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt().with_target(false).with_thread_ids(false).without_time().init();
-
     let cli_args = cli::Cli::parse();
 
+    // Logs go to stderr so that stdout stays clean for reports and JSON-RPC.
+    let default_level = if cli_args.verbose { "debug" } else { "info" };
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(default_level));
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_target(false)
+        .with_thread_ids(false)
+        .without_time()
+        .with_writer(std::io::stderr)
+        .init();
+
     match cli_args.command {
-        Some(cli::Commands::Scan { path, format, output, min_severity, mr, project }) => {
-            info!("🔍 Запуск сканирования: {}", path);
+        Some(cli::Commands::Scan { path, format, output, min_severity, mr, project, fail_on }) => {
+            // Load .kupol.yml for defaults (ignore rules are applied inside the engine).
+            let config = config::KupolConfig::load_for(&path);
+
+            info!("Scanning {}", path);
             let result = scan::run_scan(&path);
 
-            // Filter by severity
-            let min_sev = scan::Severity::from_str(&min_severity);
+            // Filter by minimum severity (CLI flag wins over config).
+            let min_sev_str = config.min_severity.clone().unwrap_or(min_severity);
+            let min_sev = scan::Severity::from_str(&min_sev_str);
             let filtered_findings = scan::graders::filter_by_severity(&result.findings, &min_sev);
             let filtered_result = scan::ScanResult {
+                summary: scan::ScanSummary::from_findings(&filtered_findings, result.summary.total_files),
                 findings: filtered_findings,
-                summary: scan::ScanSummary::from_findings(&result.findings, result.summary.total_files),
                 ..result
             };
 
             match format.as_str() {
                 "json" => {
                     let json = scan::report::to_json(&filtered_result);
-                    if let Some(path) = output {
-                        std::fs::write(&path, &json)?;
-                        info!("📄 JSON-отчёт сохранён: {}", path);
+                    if let Some(path) = &output {
+                        std::fs::write(path, &json)?;
+                        info!("JSON report written to {}", path);
                     } else {
                         println!("{}", json);
                     }
                 }
                 "markdown" | "md" => {
                     let md = scan::report::to_markdown(&filtered_result);
-                    if let Some(path) = output {
-                        std::fs::write(&path, &md)?;
-                        info!("📄 Markdown-отчёт сохранён: {}", path);
+                    if let Some(path) = &output {
+                        std::fs::write(path, &md)?;
+                        info!("Markdown report written to {}", path);
                     } else {
                         println!("{}", md);
                     }
                 }
-                _ => {
+                other => {
+                    if other != "table" {
+                        warn!("unknown format '{}', falling back to table", other);
+                    }
                     scan::report::print_table(&filtered_result);
-                    if let Some(path) = output {
+                    if let Some(path) = &output {
                         let json = scan::report::to_json(&filtered_result);
-                        std::fs::write(&path, &json)?;
-                        info!("📄 Отчёт также сохранён: {}", path);
+                        std::fs::write(path, &json)?;
+                        info!("JSON report also written to {}", path);
                     }
                 }
             }
 
-            // GitLab MR Integration
+            // Optional git-host integration: comment the report on a merge/pull request.
             if let Some(mr_id) = mr {
                 let project_id = project.or_else(|| std::env::var("GITLAB_PROJECT_ID").ok()).unwrap_or_default();
                 let token = std::env::var("GITLAB_TOKEN").ok().unwrap_or_default();
-                let gitlab_url = std::env::var("GITLAB_URL").unwrap_or_else(|_| "https://gitlab.example.com".to_string());
-                
+                let host_url = std::env::var("GITLAB_URL").unwrap_or_else(|_| "https://gitlab.com".to_string());
+
                 if !project_id.is_empty() && !token.is_empty() {
-                    let client = actors::gitlab::GitLabClient::new(&gitlab_url, &token, &project_id);
-                    // Мы всегда генерируем Markdown для GitLab
+                    let client = actors::gitlab::GitLabClient::new(&host_url, &token, &project_id);
                     let md_report = scan::report::to_markdown(&filtered_result);
-                    
-                    info!("📝 Публикация отчёта в GitLab MR #{} на {} (Project: {})", mr_id, gitlab_url, project_id);
+
+                    info!("Posting report to merge request #{} on {} (project {})", mr_id, host_url, project_id);
                     match client.comment_mr(mr_id, &md_report).await {
-                        Ok(_) => info!("✅ Отчёт успешно опубликован в MR!"),
-                        Err(e) => error!("❌ Ошибка публикации в GitLab: {}", e),
+                        Ok(_) => info!("Report posted to the merge request"),
+                        Err(e) => error!("Could not post the report: {}", e),
                     }
                 } else {
-                    warn!("⚠️ Не задан GITLAB_TOKEN или GITLAB_PROJECT_ID (флагом или env). Отчёт в MR не опубликован.");
+                    warn!("GITLAB_TOKEN or GITLAB_PROJECT_ID not set; skipping merge-request comment");
+                }
+            }
+
+            // CI gate: --fail-on flag, or fail_on from .kupol.yml.
+            if let Some(threshold) = fail_on.or(config.fail_on) {
+                let threshold_sev = scan::Severity::from_str(&threshold);
+                let tripped = filtered_result
+                    .findings
+                    .iter()
+                    .any(|f| f.severity >= threshold_sev);
+                if tripped {
+                    error!("findings at or above severity '{}' — failing", threshold);
+                    std::process::exit(1);
                 }
             }
 
@@ -203,7 +219,7 @@ async fn main() -> anyhow::Result<()> {
         }
 
         Some(cli::Commands::Report { format, output }) => {
-            info!("📊 Экспорт последних результатов...");
+            info!("Exporting scan results");
             let demo_result = scan::run_scan("src/");
             match format.as_str() {
                 "json" => {
@@ -223,62 +239,56 @@ async fn main() -> anyhow::Result<()> {
 
         Some(cli::Commands::Info) => {
             println!();
-            println!("  🛡️  Duo Architecture Guardian v{}", env!("CARGO_PKG_VERSION"));
-            println!("  ──────────────────────────────────");
-            println!("  Actors:     12 (AST, Security, Drift, GitLab, MCP, Swarm×6, Broker)");
-            println!("  Plugins:    {} security plugins", scan::plugins::all_plugins().len());
+            println!("  KUPOL v{}", env!("CARGO_PKG_VERSION"));
+            println!("  Local security scanner — https://kupol.app");
+            println!("  ----------------------------------------");
+            println!("  Plugins:    {} security checks", scan::plugins::all_plugins().len());
             println!("  Formats:    table, json, markdown");
             println!("  Runtime:    Tokio + Axum + WebSocket");
-            println!("  Dashboard:  React + TailwindCSS");
+            println!("  Dashboard:  React + Tailwind CSS");
+            println!("  Engine:     duo-agents (internal crate name)");
             println!();
             return Ok(());
         }
 
         Some(cli::Commands::Init { dir, force }) => {
-            info!("🛠️ Генерация CI/CD пайплайна...");
+            info!("Generating CI pipeline template");
             let path = std::path::Path::new(&dir).join(".gitlab-ci.yml");
-            
+
             if path.exists() && !force {
-                warn!("⚠️ Файл {} уже существует. Используйте --force для его перезаписи.", path.display());
-                std::println!("Pipeline generation skipped.");
+                warn!("{} already exists; pass --force to overwrite", path.display());
                 return Ok(());
             }
 
-            let ci_template = r#"
-# 🛡️ Платформа Duo Architecture Guardian
-# Автоматически сгенерированный пайплайн для проверки Merge Requests.
-# 
-# Требования:
-# 1. Установите GITLAB_TOKEN в Settings -> CI/CD -> Variables.
-# 2. GITLAB_PROJECT_ID и CI_MERGE_REQUEST_IID будут переданы автоматически.
+            let ci_template = r#"# KUPOL — security scan on merge requests
 #
-# Этот job запускается ТОЛЬКО на Merge Requests.
+# Fails the pipeline when a finding is at or above the --fail-on severity.
+# Install the engine (crate: duo-agents) however you prefer; this template
+# builds it from source. For production, download a release binary instead.
 
 stages:
-  - security-review
+  - security
 
-duo-agents-scan:
-  stage: security-review
-  image: rust:1.80 # Используем актуальный образ Rust
+kupol-scan:
+  stage: security
+  image: rust:1.80
   only:
     - merge_requests
   script:
-    - echo "🚀 Установка Duo Agents..."
-    # Для production рекомендуется скачивать релизный бинарник:
-    # - wget https://example.com/duo-agents-x86_64-linux -O duo-agents && chmod +x duo-agents
-    # В демо устанавливаем из исходников:
-    - cargo install --path . || true 
-    - echo "🔍 Запуск сканирования и публикация в MR..."
-    - duo-agents scan src/ --mr $CI_MERGE_REQUEST_IID --project $CI_PROJECT_ID
+    - cargo build --release
+    - ./install.sh ./target/release/duo-agents
+    - kupol scan . -f markdown -o kupol-report.md --fail-on high
+  artifacts:
+    when: always
+    paths:
+      - kupol-report.md
   variables:
-    # Задайте GITLAB_URL, если используете self-hosted GitLab (по умолчанию: https://gitlab.com)
-    # GITLAB_URL: "https://gitlab.example.com"
     RUST_LOG: "info"
-        "#;
+"#;
 
-            std::fs::write(&path, ci_template.trim())?;
-            info!("✅ Файл {} успешно сгенерирован!", path.display());
-            std::println!("GitLab CI/CD Pipeline ready. Make sure to commit '.gitlab-ci.yml' and set GITLAB_TOKEN in your project variables.");
+            std::fs::write(&path, ci_template)?;
+            info!("Wrote {}", path.display());
+            println!("CI pipeline ready. Commit '.gitlab-ci.yml' to enable KUPOL scans on merge requests.");
             return Ok(());
         }
 
@@ -287,7 +297,7 @@ duo-agents-scan:
         }
 
         Some(cli::Commands::Demo { number: _ }) | None => {
-            // Запуск демо-сценариев (оригинальный код)
+            // Run the multi-agent demo scenarios.
             crate::demos::run_demos().await?;
             return Ok(());
         }
